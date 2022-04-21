@@ -1,4 +1,4 @@
-# dbx-explorer
+# dbx-interface
 
 **No basic functionality as of yet**
 
