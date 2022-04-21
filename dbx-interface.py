@@ -1,7 +1,7 @@
 import sys
 from dbx import get_list_of_paths
 from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QDockWidget, QListWidget, qApp, QStyle
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QDockWidget, QListWidget, qApp, QStyle, QFrame, QScrollArea
 
 class ExplorerItem(QWidget):
     def __init__(self, path, is_file):
@@ -24,14 +24,22 @@ class ExplorerItem(QWidget):
         self.layout.addWidget(self.checkbox)
         self.layout.addWidget(self.label)
 
-class Explorer(QWidget):
+class Explorer(QScrollArea):
     def __init__(self, parent):
         super().__init__(parent)
 
         self.current_directory = ''
 
-        self.layout = QVBoxLayout(self)
+        self.widget = QWidget(self)
+        self.setWidget(self.widget)
+
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setFrameShape(QFrame.NoFrame)
+        self.setWidgetResizable(True)
+
+        self.layout = QVBoxLayout(self.widget)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
         self.show_list_of_items(self.current_directory)
 
     def show_list_of_items(self, directory):
@@ -50,7 +58,7 @@ class Explorer(QWidget):
 class DirectoryList(QDockWidget):
     def __init__(self, parent):
         super().__init__('Directories', parent)
-        self.setMinimumWidth(250)
+        self.setMinimumWidth(200)
 
         self.list_widget = QListWidget()
 
@@ -90,7 +98,7 @@ class MainWindow(QMainWindow):
         self.dirnames = DirectoryList(self)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dirnames)
 
-        self.setMinimumWidth(1200)
+        self.setMinimumWidth(800)
 
     def eventFilter(self, object, event):
         if event.type() == QEvent.MouseButtonDblClick:
