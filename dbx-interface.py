@@ -1,7 +1,8 @@
 import sys
 from dbx import get_list_of_paths
 from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QDockWidget, QListWidget, qApp, QStyle, QFrame, QScrollArea
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QDockWidget, QListWidget, QSizePolicy, QFrame, QScrollArea
+from PyQt5.QtSvg import QSvgWidget
 
 class ExplorerItem(QWidget):
     def __init__(self, path, is_file):
@@ -10,19 +11,20 @@ class ExplorerItem(QWidget):
         self.path = path
         self.basename = path.split('/')[-1]
 
-        self.layout = QHBoxLayout(self)
-        self.layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.layout.setContentsMargins(0, 2, 0, 2)
+        self.item_layout = QHBoxLayout(self)
+        self.item_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.item_layout.setContentsMargins(0, 2, 0, 2)
 
         self.checkbox = QCheckBox()
-        icon = QStyle.SP_FileIcon if is_file else QStyle.SP_DirIcon
-        self.checkbox.setIcon(qApp.style().standardIcon(icon))
-        self.checkbox.setTristate(True)
+
+        self.icon = QSvgWidget(f"icons/{'file-earmark' if is_file else 'folder'}.svg")
+        self.icon.setMinimumWidth(18)
 
         self.label = QLabel(self.basename)
 
-        self.layout.addWidget(self.checkbox)
-        self.layout.addWidget(self.label)
+        self.item_layout.addWidget(self.checkbox)
+        self.item_layout.addWidget(self.icon)
+        self.item_layout.addWidget(self.label)
 
 class Explorer(QScrollArea):
     def __init__(self, parent):
@@ -42,6 +44,13 @@ class Explorer(QScrollArea):
 
         self.show_list_of_items(self.current_directory)
 
+    def eventFilter(self, object, event):
+        if isinstance(object, ExplorerItem):
+            if event.type() == QEvent.MouseButtonDblClick:
+                self.parentWidget().change_explorer_directory(object.path)
+                    
+        return False
+
     def show_list_of_items(self, directory):
         while self.layout.count():
             child = self.layout.takeAt(0)
@@ -52,7 +61,7 @@ class Explorer(QScrollArea):
 
         for i in data:
             explorer_item = ExplorerItem(**i)
-            explorer_item.installEventFilter(self.parentWidget())
+            explorer_item.installEventFilter(self)
             self.layout.addWidget(explorer_item)
 
 class DirectoryList(QDockWidget):
@@ -99,13 +108,6 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dirnames)
 
         self.setMinimumWidth(800)
-
-    def eventFilter(self, object, event):
-        if event.type() == QEvent.MouseButtonDblClick:
-            print(object)
-            if isinstance(object, ExplorerItem):
-                self.change_explorer_directory(object.path)
-        return False
 
     def change_explorer_directory(self, path):
         self.dbx_explorer.show_list_of_items(path)
