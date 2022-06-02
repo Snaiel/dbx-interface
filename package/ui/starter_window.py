@@ -1,5 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QFormLayout, QLabel, QLineEdit
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit
+from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtGui import QMouseEvent
+from package.dbx_utils import create_config
 
 INFO_TEXT = '''
 1. Select a 'Scoped access' API
@@ -19,16 +21,31 @@ INFO_TEXT = '''
 8. Get the 'App key' & 'App secret'
 '''
 
-class StarterWindow(QWidget):
+class StarterWindow(QDialog):
     def __init__(self):
         super().__init__()
+        self.setup_complete = False
+
         self.setWindowTitle("Getting Started")
 
         layout = QGridLayout(self)
         layout.addWidget(InfoBox(), 0, 0)
-        layout.addWidget(InputForm(), 0, 1)
+        layout.addWidget(InputForm(self), 0, 1)
 
         self.setMaximumSize(self.size())
+
+    def eventFilter(self, object, event) -> bool:
+        if isinstance(object, QPushButton) and event.type() == QEvent.MouseButtonRelease:
+            # print(object.text())
+            if object.text() == "Close":
+                self.setup_complete = True
+                self.close()
+            else:
+                input_form = object.parent() #type: InputForm
+                app_info = input_form.get_app_info()
+                create_config(app_info[2], app_info[0], app_info[1])
+                input_form.set_done_visible()
+        return False
 
 class InfoBox(QWidget):
     def __init__(self):
@@ -48,7 +65,7 @@ class InfoBox(QWidget):
         layout.addWidget(QLabel(INFO_TEXT))
 
 class InputForm(QWidget):
-    def __init__(self):
+    def __init__(self, parent):
         super().__init__()
         self.setFixedWidth(400)
 
@@ -62,3 +79,53 @@ class InputForm(QWidget):
         layout.addWidget(QLabel("App secret"))
         self.app_secret = QLineEdit(self)
         layout.addWidget(self.app_secret)
+
+        self.app_info_submit = QPushButton("Submit")
+        self.app_info_submit.clicked.connect(self.set_auth_visible)
+        layout.addWidget(self.app_info_submit)
+
+        self.auth_hyperlink = QLabel(f"<a href=\"\">Click here to authorize your app</a>")
+        self.auth_hyperlink.setOpenExternalLinks(True)
+        self.auth_hyperlink.setContentsMargins(0, 40, 0, 0)
+        self.auth_hyperlink.setWordWrap(True)
+        layout.addWidget(self.auth_hyperlink)
+
+        self.auth_code_label = QLabel("Auth code")
+        self.auth_code_label.setContentsMargins(0, 20, 0, 0)
+        layout.addWidget(self.auth_code_label)
+        self.auth_code = QLineEdit(self)
+        layout.addWidget(self.auth_code)
+
+        self.auth_submit = QPushButton("Submit")
+        self.auth_submit.installEventFilter(parent)
+        layout.addWidget(self.auth_submit)
+
+        self.auth_hyperlink.setVisible(False)
+        self.auth_code_label.setVisible(False)
+        self.auth_code.setVisible(False)
+        self.auth_submit.setVisible(False)
+
+        self.done_label = QLabel("Setup complete")
+        self.done_label.setContentsMargins(0, 40, 0, 0)
+        layout.addWidget(self.done_label)
+        self.done_button = QPushButton("Close")
+        self.done_button.installEventFilter(parent)
+        layout.addWidget(self.done_button)
+
+        self.done_label.setVisible(False)
+        self.done_button.setVisible(False)
+
+    def set_auth_visible(self):
+        auth_link = f"https://www.dropbox.com/oauth2/authorize?client_id={self.app_key.text()}&response_type=code&token_access_type=offline"
+        self.auth_hyperlink.setText(f"<a href=\"{auth_link}\">Click here to authorize your app</a>")
+        self.auth_hyperlink.setVisible(True)
+        self.auth_code_label.setVisible(True)
+        self.auth_code.setVisible(True)
+        self.auth_submit.setVisible(True)
+
+    def set_done_visible(self):
+        self.done_label.setVisible(True)
+        self.done_button.setVisible(True)
+
+    def get_app_info(self):
+        return (self.app_key.text(), self.app_secret.text(), self.auth_code.text())

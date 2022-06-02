@@ -1,13 +1,15 @@
-from package.dbx import get_list_of_paths
+from package.dbx_utils import get_list_of_paths
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QDockWidget, QListWidget, QFrame, QScrollArea
 from PyQt5.QtSvg import QSvgWidget
+from pathlib import Path
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, dbx):
         super().__init__()
+        self.dbx = dbx
 
-        self.dbx_explorer = Explorer(self)
+        self.dbx_explorer = Explorer(self, dbx)
         self.setCentralWidget(self.dbx_explorer)
 
         self.dirnames = DirectoryList(self)
@@ -60,8 +62,9 @@ class DirectoryList(QDockWidget):
         self.parentWidget().change_explorer_directory(new_path)
 
 class Explorer(QScrollArea):
-    def __init__(self, parent):
+    def __init__(self, parent, dbx):
         super().__init__(parent)
+        self.dbx = dbx
 
         self.current_directory = ''
 
@@ -90,7 +93,7 @@ class Explorer(QScrollArea):
             if child.widget():
              child.widget().deleteLater()
 
-        data = get_list_of_paths(directory)
+        data = get_list_of_paths(self.dbx, directory)
 
         for i in data:
             explorer_item = ExplorerItem(**i)
@@ -110,7 +113,8 @@ class ExplorerItem(QWidget):
 
         self.checkbox = QCheckBox()
 
-        self.icon = QSvgWidget(f"icons/{'file-earmark' if is_file else 'folder'}.svg")
+        
+        self.icon = QSvgWidget(str(Path(Path(__file__).parent, 'icons', f"{'file-earmark' if is_file else 'folder'}.svg")))
         self.icon.renderer().setAspectRatioMode(Qt.KeepAspectRatio)
         self.icon.setMinimumWidth(30)
 

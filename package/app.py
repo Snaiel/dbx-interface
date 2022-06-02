@@ -1,38 +1,31 @@
 import sys
+import package.dbx_utils as dbx_utils
+import os.path
+from pathlib import Path
 from json import load
 from dropbox import Dropbox
 from dropbox.exceptions import AuthError
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import Qt, QEventLoop
 from package.ui.main_window import MainWindow
 from package.ui.starter_window import StarterWindow
 
-def main():
+def run():
     app = QApplication(sys.argv)
-
-    try:
-        with open('config.json', 'r+') as json_file:
-            json_data = load(json_file)
-            print(json_data)
-
-            APP_KEY = json_data["APP_KEY"]
-            APP_SECRET = json_data["APP_SECRET"]
-            ACCESS_TOKEN = json_data["ACCESS_TOKEN"]
-
-            # Create an instance of a Dropbox class, which can make requests to the API.
-            dbx = Dropbox(oauth2_access_token=ACCESS_TOKEN)
-
-            # Check that the access token is valid
-            try:
-                dbx.users_get_current_account()
-            except AuthError:
-                sys.exit("ERROR: Invalid access token; try re-generating an access token from the app console on the web.")
-
-            window = MainWindow()
-            window.show()
-    except FileNotFoundError:
+    if not Path(Path(__file__).parents[1], 'config.json').is_file():
         starter_window = StarterWindow()
-        starter_window.show()
-
-    
+        starter_window.setAttribute(Qt.WA_DeleteOnClose)
+        starter_window.exec_()
+        # print(starter_window.setup_complete)
+        if starter_window.setup_complete:
+            dbx = dbx_utils.create_dbx()
+            window = MainWindow(dbx)
+            window.show()
+        else:
+            return 0
+    else:
+        dbx = dbx_utils.create_dbx()
+        window = MainWindow(dbx)
+        window.show()
 
     return app.exec_()
