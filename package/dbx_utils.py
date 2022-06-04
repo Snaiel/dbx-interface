@@ -14,7 +14,7 @@ from dropbox.files import FileMetadata
 def create_dbx() -> Dropbox:
     with open(Path(Path(__file__).parents[1], 'config.json'), 'r+') as json_file:
         json_data = json.load(json_file)
-        print(json_data)
+        # print(json_data)
 
         APP_KEY = json_data["APP_KEY"]
         APP_SECRET = json_data["APP_SECRET"]
@@ -23,12 +23,13 @@ def create_dbx() -> Dropbox:
 
         return Dropbox(app_key=APP_KEY, app_secret=APP_SECRET, oauth2_access_token=ACCESS_TOKEN, oauth2_refresh_token=REFRESH_TOKEN)
 
-def validate_dbx(dbx: Dropbox):
+def validate_dbx(dbx: Dropbox) -> bool:
     # Check that the access token is valid
     try:
         dbx.users_get_current_account()
+        return True
     except AuthError:
-        sys.exit("ERROR: Invalid access token; try re-generating an access token from the app console on the web.")
+        return False
 
 def get_list_of_paths(dbx: Dropbox, root: str) -> list:
 
@@ -68,7 +69,7 @@ def print_list_of_paths(dbx: Dropbox, directory: str):
 
         process_entries(files.entries)
 
-def create_config(code, app_key, app_secret):
+def create_config(code, app_key, app_secret, dropbox_location):
     data = {
             'code': code,
             'grant_type': 'authorization_code',
@@ -78,6 +79,7 @@ def create_config(code, app_key, app_secret):
     r_data = r.json()
 
     config_data = {
+        'DROPBOX_LOCATION': dropbox_location,
         'APP_KEY': app_key,
         'APP_SECRET': app_secret,
         'ACCESS_TOKEN': r_data["access_token"],

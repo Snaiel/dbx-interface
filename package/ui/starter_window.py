@@ -1,6 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit
+from PyQt5.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog
 from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtGui import QMouseEvent
 from package.dbx_utils import create_config
 
 INFO_TEXT = '''
@@ -29,8 +28,10 @@ class StarterWindow(QDialog):
         self.setWindowTitle("Getting Started")
 
         layout = QGridLayout(self)
-        layout.addWidget(InfoBox(), 0, 0)
-        layout.addWidget(InputForm(self), 0, 1)
+        self.dropbox_location = DropboxLocation()
+        layout.addWidget(self.dropbox_location, 0, 0, 1, 2)
+        layout.addWidget(InfoBox(), 1, 0)
+        layout.addWidget(InputForm(self), 1, 1)
 
         self.setMaximumSize(self.size())
 
@@ -43,9 +44,31 @@ class StarterWindow(QDialog):
             else:
                 input_form = object.parent() #type: InputForm
                 app_info = input_form.get_app_info()
-                create_config(app_info[2], app_info[0], app_info[1])
+                create_config(app_info[2], app_info[0], app_info[1], self.dropbox_location.get_location())
                 input_form.set_done_visible()
         return False
+
+class DropboxLocation(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        layout = QGridLayout(self)
+        layout.addWidget(QLabel("Welcome to dbx-interface.\nTo get started, provide the path location of your local Dropbox folder"), 0, 0, 1, 2)
+        self.location_line_edit = QLineEdit()
+        self.location_picker_button = QPushButton("Select folder")
+        self.location_picker_button.setStyleSheet("padding: 6px 25px")
+        layout.addWidget(self.location_line_edit, 1, 0)
+        layout.addWidget(self.location_picker_button, 1, 1)
+        
+        self.location_picker_button.clicked.connect(self.pick_location)
+
+    def pick_location(self):
+        dialog = QFileDialog()
+        folder_path = dialog.getExistingDirectory(None, "Select Folder")
+        self.location_line_edit.setText(folder_path)
+
+    def get_location(self) -> str:
+        return self.location_line_edit.text()
 
 class InfoBox(QWidget):
     def __init__(self):
@@ -54,8 +77,7 @@ class InfoBox(QWidget):
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        layout.addWidget(QLabel("Welcome to dbx-interface. To get started,"))
-        layout.addWidget(QLabel("click the link below and create an app"))
+        layout.addWidget(QLabel("Next, click the link below and create an app"))
 
         link = "https://www.dropbox.com/lp/developers"
         hyperlink = QLabel(f"<a href=\"{link}\">{link}</a>")
@@ -81,8 +103,12 @@ class InputForm(QWidget):
         layout.addWidget(self.app_secret)
 
         self.app_info_submit = QPushButton("Submit")
+        self.app_info_submit.setDisabled(True)
         self.app_info_submit.clicked.connect(self.set_auth_visible)
         layout.addWidget(self.app_info_submit)
+
+        self.app_key.textChanged.connect(lambda state, inputs=[self.app_key, self.app_secret], btn=self.app_info_submit:self.toggle_submit_disabled(inputs, btn))
+        self.app_secret.textChanged.connect(lambda state, inputs=[self.app_key, self.app_secret], btn=self.app_info_submit:self.toggle_submit_disabled(inputs, btn))
 
         self.auth_hyperlink = QLabel(f"<a href=\"\">Click here to authorize your app</a>")
         self.auth_hyperlink.setOpenExternalLinks(True)
@@ -97,8 +123,12 @@ class InputForm(QWidget):
         layout.addWidget(self.auth_code)
 
         self.auth_submit = QPushButton("Submit")
+        self.auth_submit.setDisabled(True)
         self.auth_submit.installEventFilter(parent)
         layout.addWidget(self.auth_submit)
+
+        self.auth_code.textChanged.connect(lambda state, inputs=[self.auth_code, parent.dropbox_location.location_line_edit], btn=self.auth_submit:self.toggle_submit_disabled(inputs, btn))
+        parent.dropbox_location.location_line_edit.textChanged.connect(lambda state, inputs=[self.auth_code, parent.dropbox_location.location_line_edit], btn=self.auth_submit:self.toggle_submit_disabled(inputs, btn))
 
         self.auth_hyperlink.setVisible(False)
         self.auth_code_label.setVisible(False)
@@ -114,6 +144,16 @@ class InputForm(QWidget):
 
         self.done_label.setVisible(False)
         self.done_button.setVisible(False)
+
+    def toggle_submit_disabled(self, inputs: list, btn: QPushButton):
+        inputs_have_text = True
+        for input in inputs:
+            input: QLineEdit
+            if len(input.text()) == 0:
+                inputs_have_text = False
+
+        btn.setDisabled(False if inputs_have_text else True)
+
 
     def set_auth_visible(self):
         auth_link = f"https://www.dropbox.com/oauth2/authorize?client_id={self.app_key.text()}&response_type=code&token_access_type=offline"

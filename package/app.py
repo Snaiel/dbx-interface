@@ -1,31 +1,47 @@
 import sys
+import json
 import package.dbx_utils as dbx_utils
-import os.path
 from pathlib import Path
-from json import load
-from dropbox import Dropbox
-from dropbox.exceptions import AuthError
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt, QEventLoop
+from PyQt5.QtCore import Qt
 from package.ui.main_window import MainWindow
 from package.ui.starter_window import StarterWindow
 
-def run():
+def run(setup: bool = False) -> int:
     app = QApplication(sys.argv)
-    if not Path(Path(__file__).parents[1], 'config.json').is_file():
-        starter_window = StarterWindow()
-        starter_window.setAttribute(Qt.WA_DeleteOnClose)
-        starter_window.exec_()
-        # print(starter_window.setup_complete)
-        if starter_window.setup_complete:
-            dbx = dbx_utils.create_dbx()
-            window = MainWindow(dbx)
-            window.show()
-        else:
+    if not Path(Path(__file__).parents[1], 'config.json').is_file() or setup:
+        if not run_setup():
             return 0
-    else:
-        dbx = dbx_utils.create_dbx()
-        window = MainWindow(dbx)
-        window.show()
+
+    dbx = dbx_utils.create_dbx()
+    if not dbx_utils.validate_dbx(dbx):
+        print("ERROR: The provided Dropbox info is invalid")
+        print_error_help()
+        return 0
+
+    with open(Path(Path(__file__).parents[1], 'config.json')) as json_file:
+        json_data = json.load(json_file)
+
+        try:
+            if json_data['DROPBOX_LOCATION'] == "":
+                print("ERROR: You must provide the location of your local Dropbox folder.")
+                print_error_help()
+                return 0
+        except KeyError:
+            print("ERROR: You must provide the location of your local Dropbox folder.")
+            print_error_help()
+            return 0
+
+    window = MainWindow(dbx)
+    window.show()
 
     return app.exec_()
+
+def run_setup() -> bool:
+    starter_window = StarterWindow()
+    starter_window.setAttribute(Qt.WA_DeleteOnClose)
+    starter_window.exec_()
+    return starter_window.setup_complete
+
+def print_error_help():
+    print("Run setup again with `python3 main.py setup`")
