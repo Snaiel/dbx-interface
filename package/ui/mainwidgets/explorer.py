@@ -12,6 +12,7 @@ class Explorer(QSplitter):
         self.current_directory = ""
 
         self.setContentsMargins(0, 0, 0, 0)
+
         self.directory_panel = DirectoryPanel(self)
         self.item_list = ItemList(self, dbx, self.current_directory)
 
@@ -32,7 +33,6 @@ class DirectoryPanel(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.setMinimumWidth(200)
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
