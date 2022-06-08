@@ -50,7 +50,7 @@ def get_list_of_paths(dbx: Dropbox, root: str) -> list:
 
     file_list.sort(key= lambda x: x.path_lower)
 
-    file_list = [{'path':i.path_display, 'is_file':isinstance(i, FileMetadata)} for i in file_list]
+    file_list = [(i.path_display, isinstance(i, FileMetadata)) for i in file_list]
 
     return file_list
 

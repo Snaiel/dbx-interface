@@ -70,7 +70,7 @@ class Explorer(QSplitter):
 
         def eventFilter(self, object, event):
             if isinstance(object, Explorer.ExplorerItem):
-                if event.type() == QEvent.MouseButtonDblClick:
+                if event.type() == QEvent.MouseButtonDblClick and object.is_file == False:
                     self.parentWidget().change_explorer_directory(object.path)
                         
             return False
@@ -84,7 +84,7 @@ class Explorer(QSplitter):
             data = self.get_list_of_paths(directory)
 
             for i in data:
-                explorer_item = Explorer.ExplorerItem(**i)
+                explorer_item = Explorer.ExplorerItem(i[0], i[1])
                 explorer_item.installEventFilter(self)
                 self.layout.addWidget(explorer_item)
 
@@ -99,6 +99,8 @@ class Explorer(QSplitter):
 
             self.path = path
             self.basename = path.split('/')[-1]
+
+            self.is_file = is_file
 
             self.item_layout = QHBoxLayout(self)
             self.item_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
