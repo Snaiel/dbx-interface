@@ -12,7 +12,7 @@ from dropbox.exceptions import AuthError
 from dropbox.files import FileMetadata
 
 def create_dbx() -> Dropbox:
-    with open(Path(Path(__file__).parents[1], 'config.json'), 'r+') as json_file:
+    with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
         json_data = json.load(json_file)
         # print(json_data)
 

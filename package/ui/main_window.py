@@ -1,9 +1,10 @@
 from package.ui.mainwidgets.dbx_explorer import DropboxExplorer
+from package.ui.mainwidgets.local_explorer import LocalExplorer
 from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout
 from PyQt5.QtCore import Qt
 
 class MainWindow(QMainWindow):
-    def __init__(self, dbx):
+    def __init__(self, dbx, local_root):
         super().__init__()
         self.dbx = dbx
 
@@ -16,10 +17,12 @@ class MainWindow(QMainWindow):
         self.dbx_explorer = DropboxExplorer(central_widget, dbx)
         central_layout.addWidget(self.dbx_explorer, 0, 0)
 
-        self.another = DropboxExplorer(central_widget, dbx)
-        central_layout.addWidget(self.another, 0, 1)
+        self.local_explorer = LocalExplorer(central_widget, dbx, local_root)
+        central_layout.addWidget(self.local_explorer, 0, 1)
         central_layout.setSpacing(0)
 
+        central_layout.setColumnStretch(0, 1)
+        central_layout.setColumnStretch(1, 1)
 
         self._createToolbar()
 

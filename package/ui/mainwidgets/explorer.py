@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QSizePolicy, QSplitter
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtSvg import QSvgWidget
-from package.dbx_utils import get_list_of_paths
 from pathlib import Path
 
 class Explorer(QSplitter):
@@ -38,7 +37,7 @@ class Explorer(QSplitter):
 
             self.list_widget = QListWidget()
             self.list_widget.itemDoubleClicked.connect(lambda object: self.change_path(object))
-            self.list_widget.addItem("My Dropbox")
+            # self.list_widget.addItem("My Dropbox")
             layout.addWidget(self.list_widget)
 
         def change_displayed_directories(self, path):

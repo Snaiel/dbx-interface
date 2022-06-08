@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from package.dbx_utils import get_list_of_paths
+from package.utils.dbx_utils import get_list_of_paths
 from package.ui.mainwidgets import explorer
 
 class DropboxExplorer(explorer.Explorer):
@@ -7,7 +7,7 @@ class DropboxExplorer(explorer.Explorer):
         super().__init__(parent, "")
         self.dbx = dbx
         
-        self.directory_panel = self.DropboxDirectoryPanel(self, "", "Dropbox")
+        self.directory_panel = self.DropboxDirectoryPanel(self, "", "Dropbox Cloud")
         self.item_list = self.DropboxItemList(self, dbx, self.current_directory)
 
         self.addWidget(self.directory_panel)
@@ -19,6 +19,7 @@ class DropboxExplorer(explorer.Explorer):
     class DropboxDirectoryPanel(explorer.Explorer.DirectoryPanel):
         def __init__(self, parent: QWidget, current_directory: str, header: str):
             super().__init__(parent, current_directory, header)
+            self.list_widget.addItem("My Dropbox")
 
         def change_displayed_directories(self, path):
             self.current_directory = path

@@ -1,6 +1,6 @@
 import sys
 import json
-import package.dbx_utils as dbx_utils
+import package.utils.dbx_utils as dbx_utils
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
@@ -32,8 +32,8 @@ def run(setup: bool = False) -> int:
             print_error_help()
             return 0
 
-    window = MainWindow(dbx)
-    window.show()
+        window = MainWindow(dbx, json_data['DROPBOX_LOCATION'])
+        window.show()
 
     return app.exec_()
 

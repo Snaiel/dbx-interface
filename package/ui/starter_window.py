@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog
 from PyQt5.QtCore import Qt, QEvent
-from package.dbx_utils import create_config
+from package.utils.dbx_utils import create_config
 
 INFO_TEXT = '''
 1. Select a 'Scoped access' API
