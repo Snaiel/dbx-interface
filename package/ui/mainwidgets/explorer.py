@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QSizePolicy, QSplitter
-from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QAction
+from PyQt5.QtCore import Qt, QEvent, QObject
 from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtGui import QMouseEvent
 from pathlib import Path
 
 class Explorer(QSplitter):
@@ -84,7 +85,7 @@ class Explorer(QSplitter):
             data = self.get_list_of_paths(directory)
 
             for i in data:
-                explorer_item = Explorer.ExplorerItem(i[0], i[1])
+                explorer_item = Explorer.ExplorerItem(self, i[0], i[1])
                 explorer_item.installEventFilter(self)
                 self.layout.addWidget(explorer_item)
 
@@ -94,8 +95,8 @@ class Explorer(QSplitter):
             '''
 
     class ExplorerItem(QWidget):
-        def __init__(self, path, is_file):
-            super().__init__()
+        def __init__(self, parent, path, is_file):
+            super().__init__(parent)
 
             self.path = path
             self.basename = path.split('/')[-1]
@@ -117,3 +118,14 @@ class Explorer(QSplitter):
             self.item_layout.addWidget(self.checkbox)
             self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
+
+            # right click menu
+            self.menu = QMenu(self)
+            self.menu.addAction("Rename")
+            self.menu.addAction("Delete")
+
+            self.menu.installEventFilter(self)
+
+        def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+            if event.button() == Qt.MouseButton.RightButton:
+                self.menu.popup(event.globalPos())

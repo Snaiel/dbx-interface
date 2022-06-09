@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QInputDialog
+from PyQt5.QtCore import QEvent
 from package.ui.mainwidgets import explorer
-from package.utils.local_utils import get_list_of_paths
+import package.utils.local_utils as local_utils
 
 class LocalExplorer(explorer.Explorer):
     def __init__(self, parent, dbx, root: str):
@@ -59,9 +60,30 @@ class LocalExplorer(explorer.Explorer):
             data = self.get_list_of_paths(directory)
 
             for i in data:
-                explorer_item = explorer.Explorer.ExplorerItem(i[0], i[1])
+                explorer_item = LocalExplorer.LocalExplorerItem(self, i[0], i[1])
                 explorer_item.installEventFilter(self)
                 self.layout.addWidget(explorer_item)
 
         def get_list_of_paths(self, directory: str) -> list:
-            return get_list_of_paths(directory)
+            return local_utils.get_list_of_paths(directory)
+
+    class LocalExplorerItem(explorer.Explorer.ExplorerItem):
+        def __init__(self, parent, path, is_file):
+            super().__init__(parent, path, is_file)
+
+        def eventFilter(self, object, event:QEvent) -> bool:
+            if object == self.menu and event.type() == QEvent.Type.MouseButtonRelease:
+                action = object.actionAt(event.pos()).text()
+                print(action)
+                self.process_action(action)
+            return False
+
+        def process_action(self, action: str) -> None:
+            if action == 'Rename':
+                text, ok = QInputDialog.getText(self, "Rename", "What do you want to rename to?")
+                if ok and text:
+                    self.label.setText(text)
+                    local_utils.rename(self.path, text)
+            if action == "Delete":
+                local_utils.delete(self.path)
+                self.deleteLater()
