@@ -51,21 +51,17 @@ class LocalExplorer(explorer.Explorer):
             self.dbx = dbx
             self.show_list_of_items(self.current_directory)
 
-        def show_list_of_items(self, directory):
-            while self.layout.count():
-                child = self.layout.takeAt(0)
-                if child.widget():
-                    child.widget().deleteLater()
-
-            data = self.get_list_of_paths(directory)
-
-            for i in data:
-                explorer_item = LocalExplorer.LocalExplorerItem(self, i[0], i[1])
-                explorer_item.installEventFilter(self)
-                self.layout.addWidget(explorer_item)
-
         def get_list_of_paths(self, directory: str) -> list:
             return local_utils.get_list_of_paths(directory)
+
+        def get_explorer_item(self, item_data: list):
+            return LocalExplorer.LocalExplorerItem(self, item_data[0], item_data[1])
+
+        def process_action(self, action: str) -> None:
+            if action == 'Refresh':
+                self.show_list_of_items(self.current_directory)
+            elif action == 'Open Folder':
+                local_utils.open_path(self.current_directory)
 
     class LocalExplorerItem(explorer.Explorer.ExplorerItem):
         def __init__(self, parent, path, is_file):
@@ -84,6 +80,13 @@ class LocalExplorer(explorer.Explorer):
                 if ok and text:
                     self.label.setText(text)
                     local_utils.rename(self.path, text)
-            if action == "Delete":
+            elif action == "Delete":
                 local_utils.delete(self.path)
                 self.deleteLater()
+            elif action == 'Open':
+                local_utils.open_path(self.path)
+            elif action == 'Open Containing Folder':
+                parent = self
+                while not isinstance(parent, explorer.Explorer.ItemList):
+                    parent = parent.parentWidget()
+                local_utils.open_path(parent.current_directory)

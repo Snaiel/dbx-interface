@@ -59,6 +59,12 @@ class Explorer(QSplitter):
             super().__init__(parent)
             self.current_directory = current_directory
 
+            # right click menu
+            self.menu = QMenu(self)
+            self.menu.addAction("Refresh")
+            self.menu.addAction("Open Folder")
+            self.menu.installEventFilter(self)
+
             self.widget = QWidget(self)
             self.setWidget(self.widget)
 
@@ -69,13 +75,6 @@ class Explorer(QSplitter):
             self.layout = QVBoxLayout(self.widget)
             self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        def eventFilter(self, object, event):
-            if isinstance(object, Explorer.ExplorerItem):
-                if event.type() == QEvent.MouseButtonDblClick and object.is_file == False:
-                    self.parentWidget().change_explorer_directory(object.path)
-                        
-            return False
-
         def show_list_of_items(self, directory):
             while self.layout.count():
                 child = self.layout.takeAt(0)
@@ -83,15 +82,44 @@ class Explorer(QSplitter):
                     child.widget().deleteLater()
 
             data = self.get_list_of_paths(directory)
+            print(data)
 
             for i in data:
-                explorer_item = Explorer.ExplorerItem(self, i[0], i[1])
+                explorer_item = self.get_explorer_item(i)
                 explorer_item.installEventFilter(self)
                 self.layout.addWidget(explorer_item)
 
         def get_list_of_paths(self, directory: str) -> list:
             '''
             override this function to get a list of items in a specficed directory.
+            '''
+
+        def get_explorer_item(self, item_data: list):
+            '''
+            override to return an explorer item
+            '''
+            return Explorer.ExplorerItem(self, item_data[0], item_data[1])
+
+        def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+            if event.button() == Qt.MouseButton.RightButton:
+                self.menu.popup(event.globalPos())
+
+        def eventFilter(self, object, event):
+            # Double Clicking an item
+            if isinstance(object, Explorer.ExplorerItem):
+                if event.type() == QEvent.Type.MouseButtonDblClick and object.is_file == False:
+                    self.parentWidget().change_explorer_directory(object.path)
+            # Right clicking an empty space in the item list
+            elif object == self.menu and event.type() == QEvent.Type.MouseButtonRelease:
+                action = object.actionAt(event.pos()).text()
+                print(action)
+                self.process_action(action)
+                        
+            return False
+
+        def process_action(self, action: str) -> None:
+            '''
+            override to handle actions when right clicking an empty spot in the item list
             '''
 
     class ExplorerItem(QWidget):
@@ -123,6 +151,8 @@ class Explorer(QSplitter):
             self.menu = QMenu(self)
             self.menu.addAction("Rename")
             self.menu.addAction("Delete")
+            self.menu.addAction("Open")
+            self.menu.addAction("Open Containing Folder")
 
             self.menu.installEventFilter(self)
 
