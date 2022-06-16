@@ -11,7 +11,6 @@ def get_list_of_paths(directory: str) -> list:
 
     file_list.sort(key=lambda item: item[0].split("/")[-1].lower())
 
-
     return file_list
 
 def delete(path: str) -> None:

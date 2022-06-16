@@ -11,7 +11,6 @@ class Explorer(QSplitter):
     def __init__(self, parent, current_directory):
         super().__init__(parent)
         self.current_directory = current_directory
-        self.setContentsMargins(0, 0, 0, 0)
         self.setChildrenCollapsible(False)
 
     def change_explorer_directory(self, path):
@@ -75,6 +74,8 @@ class Explorer(QSplitter):
             self.layout = QVBoxLayout(self.widget)
             self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+            self.layout.setContentsMargins(4, 16, 20, 16)
+
         def show_list_of_items(self, directory):
             while self.layout.count():
                 child = self.layout.takeAt(0)
@@ -82,7 +83,6 @@ class Explorer(QSplitter):
                     child.widget().deleteLater()
 
             data = self.get_list_of_paths(directory)
-            print(data)
 
             for i in data:
                 explorer_item = self.get_explorer_item(i)
@@ -131,9 +131,16 @@ class Explorer(QSplitter):
 
             self.is_file = is_file
 
+            self.setAttribute(Qt.WA_StyledBackground, True)
+
+            self.setStyleSheet("QWidget::hover"
+                            "{"
+                            "background-color: #D2D2D2;"
+                            "}")
+
             self.item_layout = QHBoxLayout(self)
             self.item_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self.item_layout.setContentsMargins(0, 2, 0, 2)
+            self.item_layout.setContentsMargins(8, 4, 8, 4)
 
             self.checkbox = QCheckBox()
             
@@ -151,6 +158,7 @@ class Explorer(QSplitter):
             self.menu = QMenu(self)
             self.menu.addAction("Rename")
             self.menu.addAction("Delete")
+            self.menu.addSeparator()
             self.menu.addAction("Open")
             self.menu.addAction("Open Containing Folder")
 
