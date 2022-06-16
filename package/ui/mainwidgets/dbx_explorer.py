@@ -1,14 +1,12 @@
 from PyQt5.QtWidgets import QWidget
-from package.utils.dbx_utils import get_list_of_paths
 from package.ui.mainwidgets import explorer
 
 class DropboxExplorer(explorer.Explorer):
-    def __init__(self, parent, dbx):
-        super().__init__(parent, "")
-        self.dbx = dbx
+    def __init__(self, parent, model):
+        super().__init__(parent, model, "")
         
         self.directory_panel = self.DropboxDirectoryPanel(self, "", "Dropbox Cloud")
-        self.item_list = self.DropboxItemList(self, dbx, self.current_directory)
+        self.item_list = self.DropboxItemList(self, model, self.current_directory)
 
         self.addWidget(self.directory_panel)
         self.addWidget(self.item_list)
@@ -41,10 +39,6 @@ class DropboxExplorer(explorer.Explorer):
             self.parentWidget().change_explorer_directory(new_path)
 
     class DropboxItemList(explorer.Explorer.ItemList):
-        def __init__(self, parent, dbx, current_directory):
-            super().__init__(parent, current_directory)
-            self.dbx = dbx
+        def __init__(self, parent, model, current_directory):
+            super().__init__(parent, model, current_directory)
             self.show_list_of_items(self.current_directory)
-
-        def get_list_of_paths(self, directory: str) -> list:
-            return get_list_of_paths(self.dbx, directory)

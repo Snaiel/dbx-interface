@@ -1,6 +1,6 @@
 import sys
 import json
-import package.utils.dbx_utils as dbx_utils
+import package.utils.app_utils as app_utils
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
@@ -13,8 +13,8 @@ def run(setup: bool = False) -> int:
         if not run_setup():
             return 0
 
-    dbx = dbx_utils.create_dbx()
-    if not dbx_utils.validate_dbx(dbx):
+    dbx = app_utils.create_dbx()
+    if not app_utils.validate_dbx(dbx):
         print("ERROR: The provided Dropbox info is invalid")
         print_error_help()
         return 0

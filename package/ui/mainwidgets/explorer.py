@@ -1,15 +1,17 @@
-from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QAction
+from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog
 from PyQt5.QtCore import Qt, QEvent, QObject
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtGui import QMouseEvent
 from pathlib import Path
+from package.model.interface_model import InterfaceModel
 
 class Explorer(QSplitter):
     '''
     Widget that allows the navigation of a contained directory structure
     '''
-    def __init__(self, parent, current_directory):
+    def __init__(self, parent, model, current_directory):
         super().__init__(parent)
+        self.model = model # type: InterfaceModel
         self.current_directory = current_directory
         self.setChildrenCollapsible(False)
 
@@ -54,8 +56,10 @@ class Explorer(QSplitter):
         '''
         Widget that shows all the files and folders in a given directory
         '''
-        def __init__(self, parent, current_directory):
+        def __init__(self, parent, model, current_directory):
             super().__init__(parent)
+
+            self.model = model #type: InterfaceModel
             self.current_directory = current_directory
 
             # right click menu
@@ -82,23 +86,18 @@ class Explorer(QSplitter):
                 if child.widget():
                     child.widget().deleteLater()
 
-            data = self.get_list_of_paths(directory)
+            data = self.model.get_list_of_paths(directory)
 
             for i in data:
                 explorer_item = self.get_explorer_item(i)
                 explorer_item.installEventFilter(self)
                 self.layout.addWidget(explorer_item)
 
-        def get_list_of_paths(self, directory: str) -> list:
-            '''
-            override this function to get a list of items in a specficed directory.
-            '''
-
         def get_explorer_item(self, item_data: list):
             '''
             override to return an explorer item
             '''
-            return Explorer.ExplorerItem(self, item_data[0], item_data[1])
+            return Explorer.ExplorerItem(self, self.model, item_data[0], item_data[1])
 
         def mouseReleaseEvent(self, event: QMouseEvent) -> None:
             if event.button() == Qt.MouseButton.RightButton:
@@ -118,14 +117,16 @@ class Explorer(QSplitter):
             return False
 
         def process_action(self, action: str) -> None:
-            '''
-            override to handle actions when right clicking an empty spot in the item list
-            '''
+            if action == 'Refresh':
+                self.show_list_of_items(self.current_directory)
+            elif action == 'Open Folder':
+                self.model.open_path(self.current_directory)
 
     class ExplorerItem(QWidget):
-        def __init__(self, parent, path, is_file):
+        def __init__(self, parent, model, path, is_file):
             super().__init__(parent)
 
+            self.model = model #type: InterfaceModel
             self.path = path
             self.basename = path.split('/')[-1]
 
@@ -167,3 +168,34 @@ class Explorer(QSplitter):
         def mouseReleaseEvent(self, event: QMouseEvent) -> None:
             if event.button() == Qt.MouseButton.RightButton:
                 self.menu.popup(event.globalPos())
+        
+        def eventFilter(self, object, event:QEvent) -> bool:
+            if object == self.menu and event.type() == QEvent.Type.MouseButtonRelease:
+                action = object.actionAt(event.pos()).text()
+                print(action)
+                self.process_action(action)
+            return False
+
+        def process_action(self, action: str) -> None:
+            if action == 'Rename':
+                text, ok = QInputDialog.getText(self, "Rename", "What do you want to rename to?", text=self.basename)
+                if ok and text:
+                    self.label.setText(text)
+                    new_path = self.path.split("/")
+                    new_path = new_path[:-1]
+                    new_path.append(text)
+                    new_path = "/".join(new_path)
+                    self.model.move(self.path, new_path)
+
+                    self.path = new_path
+                    self.basename = text
+            elif action == "Delete":
+                self.model.delete(self.path)
+                self.deleteLater()
+            elif action == 'Open':
+                self.model.open_path(self.path)
+            elif action == 'Open Containing Folder':
+                parent = self
+                while not isinstance(parent, Explorer.ItemList):
+                    parent = parent.parentWidget()
+                self.model.open_path(parent.current_directory)
