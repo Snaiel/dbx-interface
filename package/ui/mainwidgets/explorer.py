@@ -80,6 +80,8 @@ class Explorer(QSplitter):
 
             self.layout.setContentsMargins(4, 16, 20, 16)
 
+            self.show_list_of_items(self.current_directory)
+
         def show_list_of_items(self, directory):
             while self.layout.count():
                 child = self.layout.takeAt(0)
@@ -155,15 +157,17 @@ class Explorer(QSplitter):
             self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
 
-            # right click menu
+            self.create_right_click_menu()
+
+            self.menu.installEventFilter(self)
+
+        def create_right_click_menu(self):
             self.menu = QMenu(self)
             self.menu.addAction("Rename")
             self.menu.addAction("Delete")
             self.menu.addSeparator()
             self.menu.addAction("Open")
             self.menu.addAction("Open Containing Folder")
-
-            self.menu.installEventFilter(self)
 
         def mouseReleaseEvent(self, event: QMouseEvent) -> None:
             if event.button() == Qt.MouseButton.RightButton:

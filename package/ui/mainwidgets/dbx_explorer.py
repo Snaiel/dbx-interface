@@ -1,5 +1,9 @@
-from PyQt5.QtWidgets import QWidget
+from posixpath import basename
+from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtCore import QEvent
+from package.model.dbx_model import DropboxModel
 from package.ui.mainwidgets import explorer
+from pathlib import Path
 
 class DropboxExplorer(explorer.Explorer):
     def __init__(self, parent, model):
@@ -41,4 +45,26 @@ class DropboxExplorer(explorer.Explorer):
     class DropboxItemList(explorer.Explorer.ItemList):
         def __init__(self, parent, model, current_directory):
             super().__init__(parent, model, current_directory)
-            self.show_list_of_items(self.current_directory)
+
+        def get_explorer_item(self, item_data: list):
+            return DropboxExplorer.DropboxExplorerItem(self, self.model, item_data[0], item_data[1])
+
+    class DropboxExplorerItem(explorer.Explorer.ExplorerItem):
+        def __init__(self, parent, model,  path, is_file):
+            super().__init__(parent, model,  path, is_file)
+            self.model = model # type: DropboxModel
+
+        def create_right_click_menu(self):
+            super().create_right_click_menu()
+            self.menu.addSeparator()
+            self.menu.addAction("Download")
+
+        def eventFilter(self, object, event: QEvent) -> bool:
+            return super().eventFilter(object, event)
+
+        def process_action(self, action: str) -> None:
+            super().process_action(action)
+            if action == 'Download':
+                download_path = QFileDialog.getSaveFileName(self, "Download Location", str(Path.home())+f"/Downloads/{self.basename}")[0]
+                self.model.download(self.path, download_path)
+                

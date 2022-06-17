@@ -45,7 +45,6 @@ class LocalExplorer(explorer.Explorer):
     class LocalItemList(explorer.Explorer.ItemList):
         def __init__(self, parent, model, current_directory):
             super().__init__(parent, model, current_directory)
-            self.show_list_of_items(self.current_directory)
 
         def get_explorer_item(self, item_data: list):
             return LocalExplorer.LocalExplorerItem(self, self.model, item_data[0], item_data[1])

@@ -1,3 +1,4 @@
+from tkinter import N
 from package.model.interface_model import InterfaceModel
 from dropbox import Dropbox
 from dropbox.files import FileMetadata
@@ -36,3 +37,11 @@ class DropboxModel(InterfaceModel):
 
     def open_path(self, path: str) -> None:
         webbrowser.open(f"https://www.dropbox.com/home{path}")
+
+    def download(self, path: str, local_path: str) -> None:
+        # Checks if the path is a file or folder
+        if isinstance(self.dbx.files_get_metadata(path), FileMetadata):
+            self.dbx.files_download_to_file(local_path, path)
+        else:
+            local_path += ".zip"
+            self.dbx.files_download_zip_to_file(local_path, path)
