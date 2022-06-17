@@ -62,6 +62,8 @@ class Explorer(QSplitter):
             self.model = model #type: InterfaceModel
             self.current_directory = current_directory
 
+            self.selected_items = []
+
             # right click menu
             self.menu = QMenu(self)
             self.menu.addAction("Refresh")
@@ -146,6 +148,7 @@ class Explorer(QSplitter):
             self.item_layout.setContentsMargins(8, 4, 8, 4)
 
             self.checkbox = QCheckBox()
+            self.checkbox.stateChanged.connect(self.checkbox_clicked)
             
             self.icon = QSvgWidget(str(Path(Path(__file__).parent, 'icons', f"{'file-earmark' if is_file else 'folder'}.svg")))
             self.icon.renderer().setAspectRatioMode(Qt.KeepAspectRatio)
@@ -168,6 +171,18 @@ class Explorer(QSplitter):
             self.menu.addSeparator()
             self.menu.addAction("Open")
             self.menu.addAction("Open Containing Folder")
+
+        def checkbox_clicked(self):
+            parent = self.parentWidget().parentWidget().parentWidget()
+            if self.checkbox.isChecked():
+                self.setStyleSheet("background-color: #D2D2D2;")
+                parent.selected_items.append(self)
+            else:
+                self.setStyleSheet("QWidget::hover"
+                            "{"
+                            "background-color: #D2D2D2;"
+                            "}")
+                parent.selected_items.remove(self)
 
         def mouseReleaseEvent(self, event: QMouseEvent) -> None:
             if event.button() == Qt.MouseButton.RightButton:
