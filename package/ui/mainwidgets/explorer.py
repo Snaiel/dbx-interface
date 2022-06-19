@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog
-from PyQt5.QtCore import Qt, QEvent, QObject
+from PyQt5.QtCore import Qt, QEvent, QPoint, QRect
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtGui import QMouseEvent
+from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor
+
 from pathlib import Path
 from package.model.interface_model import InterfaceModel
 
@@ -70,23 +71,23 @@ class Explorer(QSplitter):
             self.menu.addAction("Open Folder")
             self.menu.installEventFilter(self)
 
-            self.widget = QWidget(self)
-            self.setWidget(self.widget)
+            self.background_widget = Explorer.ItemList.RectangleSelectionBackground(self)
+            self.setWidget(self.background_widget)
 
             self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
             self.setFrameShape(QFrame.NoFrame)
             self.setWidgetResizable(True)
 
-            self.layout = QVBoxLayout(self.widget)
-            self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+            self.list_layout = QVBoxLayout(self.background_widget)
+            self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-            self.layout.setContentsMargins(4, 16, 20, 16)
+            self.list_layout.setContentsMargins(4, 16, 20, 16)
 
             self.show_list_of_items(self.current_directory)
 
         def show_list_of_items(self, directory):
-            while self.layout.count():
-                child = self.layout.takeAt(0)
+            while self.list_layout.count():
+                child = self.list_layout.takeAt(0)
                 if child.widget():
                     child.widget().deleteLater()
 
@@ -95,7 +96,7 @@ class Explorer(QSplitter):
             for i in data:
                 explorer_item = self.get_explorer_item(i)
                 explorer_item.installEventFilter(self)
-                self.layout.addWidget(explorer_item)
+                self.list_layout.addWidget(explorer_item)
 
         def get_explorer_item(self, item_data: list):
             '''
@@ -108,8 +109,10 @@ class Explorer(QSplitter):
                 self.menu.popup(event.globalPos())
 
         def eventFilter(self, object, event):
-            # Double Clicking an item
+            # Item Events
             if isinstance(object, Explorer.ExplorerItem):
+                object: Explorer.ExplorerItem
+                # Double Clicking an item
                 if event.type() == QEvent.Type.MouseButtonDblClick and object.is_file == False:
                     self.parentWidget().change_explorer_directory(object.path)
             # Right clicking an empty space in the item list
@@ -120,11 +123,55 @@ class Explorer(QSplitter):
                         
             return False
 
+        def rectangle_select(self, rect: QRect):
+            for i in range(len(self.list_layout)):
+                explorer_item = self.list_layout.itemAt(i).widget()
+                if rect.intersects(explorer_item.geometry()):
+                    explorer_item.select_item(True)
+
         def process_action(self, action: str) -> None:
             if action == 'Refresh':
                 self.show_list_of_items(self.current_directory)
             elif action == 'Open Folder':
                 self.model.open_path(self.current_directory)
+
+        class RectangleSelectionBackground(QWidget):
+            def __init__(self, parent):
+                super().__init__(parent)
+
+                self.pix = QPixmap(self.rect().size())
+                self.pix.fill(Qt.GlobalColor.transparent)
+
+                self.begin, self.destination = QPoint(), QPoint()
+                self.selecting = False
+
+            def paintEvent(self, event):
+                painter = QPainter(self)
+                painter.drawPixmap(QPoint(), self.pix)
+                if not self.begin.isNull() and not self.destination.isNull() and self.selecting:
+                    rect = QRect(self.begin, self.destination)
+                    painter.fillRect(rect.normalized(), QBrush(QColor(210, 210, 210)))
+
+            def mousePressEvent(self, event):
+                if event.buttons() == Qt.MouseButton.LeftButton:
+                    self.begin = event.pos()
+                    self.destination = self.begin
+                    self.selecting = True
+                    self.update()
+
+            def mouseMoveEvent(self, event):
+                if event.buttons() == Qt.MouseButton.LeftButton:
+                    self.destination = event.pos()
+                    self.update()
+
+            def mouseReleaseEvent(self, event):
+                self.selecting = False
+                if event.button() == Qt.MouseButton.LeftButton:
+                    rect = QRect(self.begin, self.destination)
+                    self.parentWidget().parentWidget().rectangle_select(rect)
+                    painter = QPainter(self.pix)
+                    painter.fillRect(rect.normalized(), QBrush(Qt.GlobalColor.transparent))
+                self.update()
 
     class ExplorerItem(QWidget):
         def __init__(self, parent, model, path, is_file):
@@ -136,7 +183,8 @@ class Explorer(QSplitter):
 
             self.is_file = is_file
 
-            self.setAttribute(Qt.WA_StyledBackground, True)
+            self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
 
             self.setStyleSheet("QWidget::hover"
                             "{"
@@ -173,10 +221,15 @@ class Explorer(QSplitter):
             self.menu.addAction("Open Containing Folder")
 
         def checkbox_clicked(self):
+            self.select_item(True if self.checkbox.isChecked() else False )
+
+        def select_item(self, selected):
             parent = self.parentWidget().parentWidget().parentWidget()
-            if self.checkbox.isChecked():
+            self.checkbox.setChecked(selected)
+            if selected:
                 self.setStyleSheet("background-color: #D2D2D2;")
-                parent.selected_items.append(self)
+                if self not in parent.selected_items:
+                    parent.selected_items.append(self)
             else:
                 self.setStyleSheet("QWidget::hover"
                             "{"
