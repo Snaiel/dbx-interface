@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog
+from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication
 from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor
+from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor, QWheelEvent
 
 from pathlib import Path
 from package.model.interface_model import InterfaceModel
@@ -15,6 +15,9 @@ class Explorer(QSplitter):
         self.model = model # type: InterfaceModel
         self.current_directory = current_directory
         self.setChildrenCollapsible(False)
+
+        self.directory_panel = None #type: Explorer.DirectoryPanel
+        self.item_list = None # type: Explorer.ItemList
 
     def change_explorer_directory(self, path):
         self.current_directory = path
@@ -73,6 +76,7 @@ class Explorer(QSplitter):
 
             self.background_widget = Explorer.ItemList.RectangleSelectionBackground(self)
             self.background_widget.right_clicked.connect(self.right_clicked)
+            self.background_widget.rectangle_select.connect(self.rectangle_selection)
             self.setWidget(self.background_widget)
 
             self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -117,6 +121,8 @@ class Explorer(QSplitter):
                 # Double Clicking an item
                 if event.type() == QEvent.Type.MouseButtonDblClick and object.is_file == False:
                     self.parentWidget().change_explorer_directory(object.path)
+                elif event.type() == QEvent.Type.Wheel:
+                    self.wheelEvent(event)
             elif object == self.menu and event.type() == QEvent.Type.MouseButtonRelease:
                 # Right clicking an empty space in the item list
                 action = object.actionAt(event.pos()).text()
@@ -125,11 +131,20 @@ class Explorer(QSplitter):
                         
             return False
 
-        def rectangle_select(self, rect: QRect):
+        @pyqtSlot(QRect, bool)
+        def rectangle_selection(self, rect: QRect, deselect: bool):
             for i in range(len(self.list_layout)):
                 explorer_item = self.list_layout.itemAt(i).widget()
                 if rect.intersects(explorer_item.geometry()):
-                    explorer_item.select_item(True)
+                    explorer_item.select_item(not deselect)
+
+        @pyqtSlot(object)
+        def item_selection_state_changed(self, item):
+            item: Explorer.ExplorerItem
+            if item in self.selected_items:
+                self.selected_items.remove(item)
+            else:
+                self.selected_items.append(item)
 
         def process_action(self, action: str) -> None:
             if action == 'Refresh':
@@ -140,6 +155,7 @@ class Explorer(QSplitter):
         class RectangleSelectionBackground(QWidget):
 
             right_clicked = pyqtSignal(QMouseEvent)
+            rectangle_select = pyqtSignal(QRect, bool)
 
             def __init__(self, parent):
                 super().__init__(parent)
@@ -172,8 +188,12 @@ class Explorer(QSplitter):
             def mouseReleaseEvent(self, event: QMouseEvent):
                 self.selecting = False
                 if event.button() == Qt.MouseButton.LeftButton:
+                    modifiers = QApplication.keyboardModifiers()
+                    deselect = False
+                    if modifiers == Qt.KeyboardModifier.ControlModifier:
+                        deselect = True
                     rect = QRect(self.begin, self.destination)
-                    self.parentWidget().parentWidget().rectangle_select(rect)
+                    self.rectangle_select.emit(rect, deselect)
                     painter = QPainter(self.pix)
                     painter.fillRect(rect.normalized(), QBrush(Qt.GlobalColor.transparent))
                 elif event.button() == Qt.MouseButton.RightButton:
@@ -181,6 +201,8 @@ class Explorer(QSplitter):
                 self.update()
 
     class ExplorerItem(QWidget):
+        selection_state_changed = pyqtSignal(object)
+
         def __init__(self, parent, model, path, is_file):
             super().__init__(parent)
 
@@ -228,21 +250,18 @@ class Explorer(QSplitter):
             self.menu.addAction("Open Containing Folder")
 
         def checkbox_clicked(self):
-            self.select_item(True if self.checkbox.isChecked() else False )
+            self.select_item(True if self.checkbox.isChecked() else False)
+            self.selection_state_changed.emit(self)
 
         def select_item(self, selected):
-            parent = self.parentWidget().parentWidget().parentWidget()
             self.checkbox.setChecked(selected)
             if selected:
                 self.setStyleSheet("background-color: #D2D2D2;")
-                if self not in parent.selected_items:
-                    parent.selected_items.append(self)
             else:
                 self.setStyleSheet("QWidget::hover"
                             "{"
-                            "background-color: #D2D2D2;"
+                            "   background-color: #D2D2D2;"
                             "}")
-                parent.selected_items.remove(self)
 
         def mouseReleaseEvent(self, event: QMouseEvent) -> None:
             if event.button() == Qt.MouseButton.RightButton:
