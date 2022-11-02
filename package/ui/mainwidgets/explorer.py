@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog
-from PyQt5.QtCore import Qt, QEvent, QPoint, QRect
+from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor
+from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor
 
 from pathlib import Path
 from package.model.interface_model import InterfaceModel
@@ -72,10 +72,11 @@ class Explorer(QSplitter):
             self.menu.installEventFilter(self)
 
             self.background_widget = Explorer.ItemList.RectangleSelectionBackground(self)
+            self.background_widget.right_clicked.connect(self.right_clicked)
             self.setWidget(self.background_widget)
 
             self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-            self.setFrameShape(QFrame.NoFrame)
+            self.setFrameShape(QFrame.Shape.NoFrame)
             self.setWidgetResizable(True)
 
             self.list_layout = QVBoxLayout(self.background_widget)
@@ -104,9 +105,10 @@ class Explorer(QSplitter):
             '''
             return Explorer.ExplorerItem(self, self.model, item_data[0], item_data[1])
 
-        def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        @pyqtSlot(QMouseEvent)
+        def right_clicked(self, event: QMouseEvent):
             if event.button() == Qt.MouseButton.RightButton:
-                self.menu.popup(event.globalPos())
+                self.menu.popup(QCursor.pos())
 
         def eventFilter(self, object, event):
             # Item Events
@@ -115,8 +117,8 @@ class Explorer(QSplitter):
                 # Double Clicking an item
                 if event.type() == QEvent.Type.MouseButtonDblClick and object.is_file == False:
                     self.parentWidget().change_explorer_directory(object.path)
-            # Right clicking an empty space in the item list
             elif object == self.menu and event.type() == QEvent.Type.MouseButtonRelease:
+                # Right clicking an empty space in the item list
                 action = object.actionAt(event.pos()).text()
                 print(action)
                 self.process_action(action)
@@ -136,6 +138,9 @@ class Explorer(QSplitter):
                 self.model.open_path(self.current_directory)
 
         class RectangleSelectionBackground(QWidget):
+
+            right_clicked = pyqtSignal(QMouseEvent)
+
             def __init__(self, parent):
                 super().__init__(parent)
 
@@ -164,13 +169,15 @@ class Explorer(QSplitter):
                     self.destination = event.pos()
                     self.update()
 
-            def mouseReleaseEvent(self, event):
+            def mouseReleaseEvent(self, event: QMouseEvent):
                 self.selecting = False
                 if event.button() == Qt.MouseButton.LeftButton:
                     rect = QRect(self.begin, self.destination)
                     self.parentWidget().parentWidget().rectangle_select(rect)
                     painter = QPainter(self.pix)
                     painter.fillRect(rect.normalized(), QBrush(Qt.GlobalColor.transparent))
+                elif event.button() == Qt.MouseButton.RightButton:
+                    self.right_clicked.emit(event)
                 self.update()
 
     class ExplorerItem(QWidget):

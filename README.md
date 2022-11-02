@@ -17,8 +17,13 @@ Project created due to lack of Smart Sync functionality with Linux
 ## Installation
 
 1. Clone the repository
-2. run `python3 dbx-interface.py` whilst in the directory
+2. run `python3 main.py` whilst in the directory
 
 ## License
 
 This project is under the GNU GPLv3 license.
+
+## Inspired By
+
+Dropbox Uploader
+https://github.com/andreafabrizi/Dropbox-Uploader

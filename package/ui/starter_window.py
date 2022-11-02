@@ -3,12 +3,12 @@ from PyQt5.QtCore import Qt, QEvent
 from package.utils.app_utils import create_config
 
 INFO_TEXT = '''
-1. Select a 'Scoped access' API
-2. Choose 'Full Dropbox' access type
+1. Select the 'Scoped access' API
+2. Choose the 'Full Dropbox' access type
 3. Name the app
         for example: dbx-interface-8927612423
         (name must be original, thus numbers)
-4. Create app
+4. Create the app
 5. Go to 'Permissions' tab
 5. Tick the following boxes:
         • files.metadata.write
@@ -53,10 +53,10 @@ class DropboxLocation(QWidget):
         super().__init__()
 
         layout = QGridLayout(self)
-        layout.addWidget(QLabel("Welcome to dbx-interface.\nTo get started, provide the path location of your local Dropbox folder"), 0, 0, 1, 2)
+        layout.addWidget(QLabel("Welcome to dbx-interface.\nTo get started, provide the desired path location of your local Dropbox folder"), 0, 0, 1, 2)
         self.location_line_edit = QLineEdit()
         self.location_picker_button = QPushButton("Select folder")
-        self.location_picker_button.setStyleSheet("padding: 6px 25px")
+        self.location_picker_button.setStyleSheet("padding: 3px 25px")
         layout.addWidget(self.location_line_edit, 1, 0)
         layout.addWidget(self.location_picker_button, 1, 1)
         
