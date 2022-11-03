@@ -1,8 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication
 from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor, QWheelEvent
-
+from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor
 from pathlib import Path
 from package.model.interface_model import InterfaceModel
 
@@ -10,6 +9,9 @@ class Explorer(QSplitter):
     '''
     Widget that allows the navigation of a contained directory structure
     '''
+
+    selection_num_changed = pyqtSignal(int)
+
     def __init__(self, parent, model, current_directory):
         super().__init__(parent)
         self.model = model # type: InterfaceModel
@@ -24,6 +26,9 @@ class Explorer(QSplitter):
         self.item_list.show_list_of_items(path)
         self.item_list.current_directory = path
         self.directory_panel.change_displayed_directories(self.current_directory)
+
+        self.item_list.selected_items.clear()
+        self.selection_num_changed.emit(0)
 
     class DirectoryPanel(QWidget):
         '''
@@ -60,6 +65,9 @@ class Explorer(QSplitter):
         '''
         Widget that shows all the files and folders in a given directory
         '''
+
+        selection_num_changed = pyqtSignal(int)
+
         def __init__(self, parent, model, current_directory):
             super().__init__(parent)
 
@@ -101,6 +109,7 @@ class Explorer(QSplitter):
             for i in data:
                 explorer_item = self.get_explorer_item(i)
                 explorer_item.installEventFilter(self)
+                explorer_item.selection_state_changed.connect(self.item_selection_state_changed)
                 self.list_layout.addWidget(explorer_item)
 
         def get_explorer_item(self, item_data: list):
@@ -145,6 +154,7 @@ class Explorer(QSplitter):
                 self.selected_items.remove(item)
             else:
                 self.selected_items.append(item)
+            self.selection_num_changed.emit(len(self.selected_items))
 
         def process_action(self, action: str) -> None:
             if action == 'Refresh':
