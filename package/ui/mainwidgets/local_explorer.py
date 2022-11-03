@@ -8,6 +8,9 @@ class LocalExplorer(explorer.Explorer):
         self.directory_panel = self.LocalDirectoryPanel(self, root, "Local Dropbox")
         self.item_list = self.LocalItemList(self, model, self.current_directory)
 
+        self.directory_panel.left_clicked.connect(self.mouseReleaseEvent)
+        self.item_list.left_clicked.connect(self.mouseReleaseEvent)
+
         self.addWidget(self.directory_panel)
         self.addWidget(self.item_list)
 

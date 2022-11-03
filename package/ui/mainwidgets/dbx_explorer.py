@@ -12,6 +12,9 @@ class DropboxExplorer(explorer.Explorer):
         self.directory_panel = self.DropboxDirectoryPanel(self, "", "Dropbox Cloud")
         self.item_list = self.DropboxItemList(self, model, self.current_directory)
 
+        self.directory_panel.left_clicked.connect(self.mouseReleaseEvent)
+        self.item_list.left_clicked.connect(self.mouseReleaseEvent)
+
         self.addWidget(self.directory_panel)
         self.addWidget(self.item_list)
 

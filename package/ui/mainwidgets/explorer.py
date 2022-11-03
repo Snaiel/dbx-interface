@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication
-from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication, QShortcut
+from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal, QObject
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor
 from pathlib import Path
@@ -11,6 +11,7 @@ class Explorer(QSplitter):
     '''
 
     selection_num_changed = pyqtSignal(int)
+    left_clicked = pyqtSignal(QWidget)
 
     def __init__(self, parent, model, current_directory):
         super().__init__(parent)
@@ -18,8 +19,8 @@ class Explorer(QSplitter):
         self.current_directory = current_directory
         self.setChildrenCollapsible(False)
 
-        self.directory_panel = None #type: Explorer.DirectoryPanel
-        self.item_list = None # type: Explorer.ItemList
+        self.directory_panel : Explorer.DirectoryPanel
+        self.item_list : Explorer.ItemList
 
     def change_explorer_directory(self, path):
         self.current_directory = path
@@ -30,10 +31,16 @@ class Explorer(QSplitter):
         self.item_list.selected_items.clear()
         self.selection_num_changed.emit(0)
 
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.left_clicked.emit(self)
+
     class DirectoryPanel(QWidget):
         '''
         A panel that lists all parent directories for easy navigation
         '''
+
+        left_clicked = pyqtSignal(QWidget)
+
         def __init__(self, parent: QWidget, current_directory: str, header: str):
             super().__init__(parent)
             self.current_directory = current_directory
@@ -48,7 +55,6 @@ class Explorer(QSplitter):
 
             self.list_widget = QListWidget()
             self.list_widget.itemDoubleClicked.connect(lambda object: self.change_path(object))
-            # self.list_widget.addItem("My Dropbox")
             layout.addWidget(self.list_widget)
 
         def change_displayed_directories(self, path):
@@ -61,11 +67,15 @@ class Explorer(QSplitter):
             override to change path when a list item is double clicked
             '''
 
+        def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+            self.left_clicked.emit(self)
+
     class ItemList(QScrollArea):
         '''
         Widget that shows all the files and folders in a given directory
         '''
 
+        left_clicked = pyqtSignal(QWidget)
         selection_num_changed = pyqtSignal(int)
 
         def __init__(self, parent, model, current_directory):
@@ -85,6 +95,7 @@ class Explorer(QSplitter):
             self.background_widget = Explorer.ItemList.RectangleSelectionBackground(self)
             self.background_widget.right_clicked.connect(self.right_clicked)
             self.background_widget.rectangle_select.connect(self.rectangle_selection)
+            self.background_widget.left_clicked.connect(lambda: self.left_clicked.emit(self))
             self.setWidget(self.background_widget)
 
             self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -132,6 +143,8 @@ class Explorer(QSplitter):
                     self.parentWidget().change_explorer_directory(object.path)
                 elif event.type() == QEvent.Type.Wheel:
                     self.wheelEvent(event)
+                elif event.type() == QEvent.Type.MouseButtonRelease:
+                    self.left_clicked.emit(self)
             elif object == self.menu and event.type() == QEvent.Type.MouseButtonRelease:
                 # Right clicking an empty space in the item list
                 action = object.actionAt(event.pos()).text()
@@ -156,6 +169,16 @@ class Explorer(QSplitter):
                 self.selected_items.append(item)
             self.selection_num_changed.emit(len(self.selected_items))
 
+        def select_all(self):
+            for i in range(len(self.list_layout)):
+                explorer_item = self.list_layout.itemAt(i).widget()
+                explorer_item.select_item()
+
+        def deselect_all(self):
+            for i in range(len(self.list_layout)):
+                explorer_item = self.list_layout.itemAt(i).widget()
+                explorer_item.select_item(False)
+
         def process_action(self, action: str) -> None:
             if action == 'Refresh':
                 self.show_list_of_items(self.current_directory)
@@ -164,6 +187,7 @@ class Explorer(QSplitter):
 
         class RectangleSelectionBackground(QWidget):
 
+            left_clicked = pyqtSignal()
             right_clicked = pyqtSignal(QMouseEvent)
             rectangle_select = pyqtSignal(QRect, bool)
 
@@ -204,6 +228,7 @@ class Explorer(QSplitter):
                         deselect = True
                     rect = QRect(self.begin, self.destination)
                     self.rectangle_select.emit(rect, deselect)
+                    self.left_clicked.emit()
                     painter = QPainter(self.pix)
                     painter.fillRect(rect.normalized(), QBrush(Qt.GlobalColor.transparent))
                 elif event.button() == Qt.MouseButton.RightButton:
@@ -263,7 +288,7 @@ class Explorer(QSplitter):
             self.select_item(True if self.checkbox.isChecked() else False)
             self.selection_state_changed.emit(self)
 
-        def select_item(self, selected):
+        def select_item(self, selected = True):
             self.checkbox.setChecked(selected)
             if selected:
                 self.setStyleSheet("background-color: #D2D2D2;")
