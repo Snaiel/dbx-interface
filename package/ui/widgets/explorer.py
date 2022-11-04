@@ -10,7 +10,7 @@ class Explorer(QSplitter):
     Widget that allows the navigation of a contained directory structure
     '''
 
-    selection_num_changed = pyqtSignal(int)
+    selection_num_changed = pyqtSignal(QObject, int)
     left_clicked = pyqtSignal(QWidget)
 
     def __init__(self, parent, model, current_directory):
@@ -318,17 +318,20 @@ class Explorer(QSplitter):
                     new_path = new_path[:-1]
                     new_path.append(text)
                     new_path = "/".join(new_path)
-                    self.model.move(self.path, new_path)
-
+                    # self.model.move(self.path, new_path)
+                    self.model.perform_action('move', path=self.path, new_path=new_path)
                     self.path = new_path
                     self.basename = text
             elif action == "Delete":
-                self.model.delete(self.path)
+                # self.model.delete(self.path)
+                self.model.perform_action('delete', path=self.path)
                 self.deleteLater()
             elif action == 'Open':
-                self.model.open_path(self.path)
+                # self.model.open_path(self.path)
+                self.model.perform_action('open', path=self.path)
             elif action == 'Open Containing Folder':
                 parent = self
                 while not isinstance(parent, Explorer.ItemList):
                     parent = parent.parentWidget()
-                self.model.open_path(parent.current_directory)
+                # self.model.open_path(parent.current_directory)
+                self.model.perform_action('open', path=parent.current_directory)

@@ -1,23 +1,32 @@
-class InterfaceModel:
+from PyQt5.QtCore import pyqtSignal, QObject
+
+class InterfaceModel(QObject):
+    action_update = pyqtSignal(QObject, str)
+
     def __init__(self) -> None:
-        pass
+        super().__init__()
 
     def get_list_of_paths(self, directory: str) -> list:
         '''
-        override to provide respective functionality
+        retrieves a list of files and folders given a directory path
+        '''
+
+    def perform_action(self, action: str, **kwargs):
+        '''
+        performs a given action using multithreading
         '''
 
     def delete(self, path: str) -> None:
         '''
-        override to provide respective functionality
+        delete the item at the specified path
         '''
 
     def move(self, path: str, new_path: str) -> None:
         '''
-        override to provide respective functionality
+        move the item from the specified path to new_path
         '''
 
     def open_path(self, path: str) -> None:
         '''
-        override to provide respective functionality
+        open the path for viewing
         '''

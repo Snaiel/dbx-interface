@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from package.ui.mainwidgets import explorer
+from package.ui.widgets import explorer
 
 class LocalExplorer(explorer.Explorer):
     def __init__(self, parent, model, root: str):
@@ -7,6 +7,8 @@ class LocalExplorer(explorer.Explorer):
         
         self.directory_panel = self.LocalDirectoryPanel(self, root, "Local Dropbox")
         self.item_list = self.LocalItemList(self, model, self.current_directory)
+
+        self.item_list.selection_num_changed.connect(lambda num: self.selection_num_changed.emit(self, num))
 
         self.directory_panel.left_clicked.connect(self.mouseReleaseEvent)
         self.item_list.left_clicked.connect(self.mouseReleaseEvent)
