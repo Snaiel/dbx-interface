@@ -62,12 +62,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def _onpopup(self):
-        self._popframe = MainWindow.ActionStatusPopup(self, self.dbx_explorer)
-        self._popframe.move(0, 0)
-        # self._popframe.resize(self.width(), self.height())
-        # self._popframe.SIGNALS.CLOSE.connect(self._closepopup)
-        self._popflag = True
-        self._popframe.show()
+        self.actions_status = MainWindow.ActionStatusPopup(self, self.dbx_explorer)
+        self.actions_status.close_signal.connect(lambda: self.actions_status.hide())
+        self.actions_status.show()
 
     class ActionStatusPopup(QWidget):
 
@@ -109,6 +106,13 @@ class MainWindow(QMainWindow):
             self.close_btn = QSvgWidget(str(Path(Path(__file__).parent, 'widgets', 'icons', "x.svg")), self.central_widget)
             self.close_btn.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
             self.close_btn.setFixedWidth(20)
+            self.close_btn.installEventFilter(self)
+            self.close_btn.setStyleSheet(
+                "QWidget::hover {"
+                "background-color: #D2D2D2;"
+                "border-radius: 2px;"
+                "}"
+            )
 
             self.central_layout.addWidget(self.header, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft)
             self.central_layout.addWidget(self.close_btn, 0, 1, 1, 1, Qt.AlignmentFlag.AlignRight)
@@ -142,11 +146,17 @@ class MainWindow(QMainWindow):
             return super().paintEvent(event)
 
         def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-            print(self.central_widget.rect().contains(event.pos()))
+            central_rect = self.central_widget.rect()
+            central_rect.translate(self.central_widget.pos())
+            if not central_rect.contains(event.pos()):
+                self.close_signal.emit()
 
-        def _onclose(self):
-            print("Close")
-            self.close_signal.emit()
+        def eventFilter(self, object: QObject, event: QEvent) -> bool:
+            if object == self.close_btn and event.type() == QEvent.Type.MouseButtonRelease:
+                if event.button() == Qt.MouseButton.LeftButton:
+                    self.close_signal.emit()
+                    
+            return False
 
     class StatusBar(QStatusBar):
         def __init__(self):
