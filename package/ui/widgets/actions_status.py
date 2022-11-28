@@ -97,4 +97,5 @@ class ActionStatusPopup(QWidget):
                 self.close_signal.emit()
         elif object == self.explorer and event.type() == QEvent.Type.Resize:
             self.resize(self.explorer.size())
+            self.central_widget.move(self.rect().center() - QPoint(int(self.central_widget.width() / 2), int(self.central_widget.height() / 2)))
         return False
