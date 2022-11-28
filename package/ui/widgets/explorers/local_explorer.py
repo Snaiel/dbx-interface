@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from package.ui.widgets import explorer
+from package.ui.widgets.explorers import explorer
 
 class LocalExplorer(explorer.Explorer):
     def __init__(self, parent, model, root: str):

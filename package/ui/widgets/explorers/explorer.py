@@ -262,7 +262,7 @@ class Explorer(QSplitter):
             self.checkbox = QCheckBox()
             self.checkbox.stateChanged.connect(self.checkbox_clicked)
             
-            self.icon = QSvgWidget(str(Path(Path(__file__).parent, 'icons', f"{'file-earmark' if is_file else 'folder'}.svg")))
+            self.icon = QSvgWidget(str(Path(Path(__file__).parents[2], 'icons', f"{'file-earmark' if is_file else 'folder'}.svg")))
             self.icon.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
             self.icon.setMinimumWidth(30)
 

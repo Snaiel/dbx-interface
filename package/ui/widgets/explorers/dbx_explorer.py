@@ -2,7 +2,7 @@ from posixpath import basename
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtCore import QEvent
 from package.model.dbx_model import DropboxModel
-from package.ui.widgets import explorer
+from package.ui.widgets.explorers import explorer
 from pathlib import Path
 
 class DropboxExplorer(explorer.Explorer):
