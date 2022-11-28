@@ -29,7 +29,7 @@ class Explorer(QSplitter):
         self.directory_panel.change_displayed_directories(self.current_directory)
 
         self.item_list.selected_items.clear()
-        self.selection_num_changed.emit(0)
+        self.selection_num_changed.emit(self, 0)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self.left_clicked.emit(self)
@@ -167,7 +167,7 @@ class Explorer(QSplitter):
                 self.selected_items.remove(item)
             else:
                 self.selected_items.append(item)
-            self.selection_num_changed.emit(len(self.selected_items))
+            self.selection_num_changed.emit(self.parent(), len(self.selected_items))
 
         def select_all(self):
             for i in range(len(self.list_layout)):
