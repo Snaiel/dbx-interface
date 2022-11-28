@@ -1,14 +1,15 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QSizePolicy, QScrollArea, QFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QEvent, Qt, QPoint
-from PyQt5.QtGui import QColor, QPainter, QMouseEvent
+from PyQt5.QtGui import QColor, QPainter, QMouseEvent, QResizeEvent
 from PyQt5.QtSvg import QSvgWidget
 from pathlib import Path
+from package.ui.widgets.explorers.explorer import Explorer
 
 class ActionStatusPopup(QWidget):
 
     close_signal = pyqtSignal()
 
-    def __init__(self, parent, explorer):
+    def __init__(self, parent, explorer: Explorer):
         super().__init__(parent)
 
         self.explorer = explorer
@@ -71,12 +72,13 @@ class ActionStatusPopup(QWidget):
 
         self.central_widget.move(self.rect().center() - QPoint(int(self.central_widget.width() / 2), int(self.central_widget.height() / 2)))
 
+        explorer.installEventFilter(self)
+
     def paintEvent(self, event):
         # dim the background
         s = self.explorer.size()
         qp = QPainter()
         qp.begin(self)
-        # qp.setRenderHint(QPainter.Antialiasing, True)
         qp.setBrush(self.fillColor)
         qp.setPen(QColor(0, 0, 0, 0))
         qp.drawRect(0, 0, s.width(), s.height())
@@ -93,4 +95,6 @@ class ActionStatusPopup(QWidget):
         if object == self.close_btn and event.type() == QEvent.Type.MouseButtonRelease:
             if event.button() == Qt.MouseButton.LeftButton:
                 self.close_signal.emit()
+        elif object == self.explorer and event.type() == QEvent.Type.Resize:
+            self.resize(self.explorer.size())
         return False
