@@ -74,6 +74,8 @@ class ActionStatusPopup(QWidget):
 
         explorer.installEventFilter(self)
 
+        self.hide()
+
     def paintEvent(self, event):
         # dim the background
         s = self.explorer.size()
@@ -89,13 +91,24 @@ class ActionStatusPopup(QWidget):
         central_rect = self.central_widget.rect()
         central_rect.translate(self.central_widget.pos())
         if not central_rect.contains(event.pos()):
-            self.close_signal.emit()
+            # self.close_signal.emit()
+            self.hide()
 
     def eventFilter(self, object: QObject, event: QEvent) -> bool:
         if object == self.close_btn and event.type() == QEvent.Type.MouseButtonRelease:
             if event.button() == Qt.MouseButton.LeftButton:
-                self.close_signal.emit()
+                # self.close_signal.emit()
+                self.hide()
         elif object == self.explorer and event.type() == QEvent.Type.Resize:
             self.resize(self.explorer.size())
             self.central_widget.move(self.rect().center() - QPoint(int(self.central_widget.width() / 2), int(self.central_widget.height() / 2)))
         return False
+
+    def toggle(self):
+        if self.pos() != self.explorer.pos():
+            self.move(self.explorer.pos())
+            
+        if self.isHidden():
+            self.show()
+        else:
+            self.hide()

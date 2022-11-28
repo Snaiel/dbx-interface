@@ -20,7 +20,6 @@ class MainWindow(QMainWindow):
 
         # Status Bar
         self.status_bar = StatusBar()
-        self.status_bar.cloud.action_label_clicked.connect(self._onpopup)
         self.setStatusBar(self.status_bar)
 
         # Dropbox Interface
@@ -42,6 +41,13 @@ class MainWindow(QMainWindow):
         central_layout.setSpacing(0)
         self.local_explorer.left_clicked.connect(self.explorer_focus)
 
+        # Action Status Popups
+        self.dbx_actions_status = ActionStatusPopup(self, self.dbx_explorer)
+        self.status_bar.cloud.action_label_clicked.connect(lambda: self.dbx_actions_status.toggle())
+        self.local_actions_status = ActionStatusPopup(self, self.local_explorer)
+        self.status_bar.local.action_label_clicked.connect(lambda: self.local_actions_status.toggle())
+
+        # Set the initial focused explorer
         self.focused_explorer = self.dbx_explorer
 
         central_layout.setColumnStretch(0, 1)
@@ -59,9 +65,3 @@ class MainWindow(QMainWindow):
     @pyqtSlot(QWidget)
     def explorer_focus(self, widget: QWidget):
         self.focused_explorer = widget
-
-    @pyqtSlot()
-    def _onpopup(self):
-        self.actions_status = ActionStatusPopup(self, self.dbx_explorer)
-        self.actions_status.close_signal.connect(lambda: self.actions_status.hide())
-        self.actions_status.show()

@@ -3,7 +3,7 @@ from package.ui.widgets.explorers.local_explorer import LocalExplorer
 from package.model.dbx_model import DropboxModel
 from package.model.local_model import LocalModel
 from PyQt5.QtWidgets import QWidget, QLabel, QStatusBar, QHBoxLayout
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QEvent
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QEvent, Qt
 
 class StatusBar(QStatusBar):
     def __init__(self):
@@ -36,7 +36,9 @@ class StatusBar(QStatusBar):
         return statusbar_section
 
     class StatusBarSection(QWidget):
-        action_label_clicked = pyqtSignal()
+
+        action_label_clicked = pyqtSignal(QWidget)
+        
         def __init__(self):
             super().__init__()
 
@@ -63,6 +65,6 @@ class StatusBar(QStatusBar):
             self.action_status.setText(message)
 
         def eventFilter(self, object: QObject, event: QEvent) -> bool:
-            if object == self.action_status and event.type() == QEvent.Type.MouseButtonRelease:
-                self.action_label_clicked.emit()
+            if object == self.action_status and event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
+                self.action_label_clicked.emit(self)
             return False    
