@@ -22,11 +22,17 @@ class MainWindow(QMainWindow):
         self.status_bar = StatusBar()
         self.setStatusBar(self.status_bar)
 
+        # Action Status Popups
+        self.dbx_actions_status = ActionStatusPopup(self)
+        self.status_bar.cloud.action_label_clicked.connect(self.dbx_actions_status.toggle)
+        self.local_actions_status = ActionStatusPopup(self)
+        self.status_bar.local.action_label_clicked.connect(self.local_actions_status.toggle)
+
         # Dropbox Interface
         self.dbx_model = DropboxModel(dbx)
         self.dbx_model.action_update.connect(self.status_bar.update_action_status)
 
-        self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model)
+        self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_actions_status)
         self.dbx_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
         central_layout.addWidget(self.dbx_explorer, 0, 0)
         self.dbx_explorer.left_clicked.connect(self.explorer_focus)
@@ -35,17 +41,14 @@ class MainWindow(QMainWindow):
         self.local_model = LocalModel()
         self.local_model.action_update.connect(self.status_bar.update_action_status)
 
-        self.local_explorer = LocalExplorer(central_widget, self.local_model, local_root)
+        self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_actions_status, local_root)
         self.local_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
         central_layout.addWidget(self.local_explorer, 0, 1)
         central_layout.setSpacing(0)
         self.local_explorer.left_clicked.connect(self.explorer_focus)
 
-        # Action Status Popups
-        self.dbx_actions_status = ActionStatusPopup(self, self.dbx_explorer)
-        self.status_bar.cloud.action_label_clicked.connect(lambda: self.dbx_actions_status.toggle())
-        self.local_actions_status = ActionStatusPopup(self, self.local_explorer)
-        self.status_bar.local.action_label_clicked.connect(lambda: self.local_actions_status.toggle())
+        self.dbx_actions_status.set_explorer(self.dbx_explorer)
+        self.local_actions_status.set_explorer(self.local_explorer)
 
         # Set the initial focused explorer
         self.focused_explorer = self.dbx_explorer

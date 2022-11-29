@@ -37,7 +37,7 @@ class StatusBar(QStatusBar):
 
     class StatusBarSection(QWidget):
 
-        action_label_clicked = pyqtSignal(QWidget)
+        action_label_clicked = pyqtSignal()
         
         def __init__(self):
             super().__init__()
@@ -66,5 +66,5 @@ class StatusBar(QStatusBar):
 
         def eventFilter(self, object: QObject, event: QEvent) -> bool:
             if object == self.action_status and event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
-                self.action_label_clicked.emit(self)
+                self.action_label_clicked.emit()
             return False    

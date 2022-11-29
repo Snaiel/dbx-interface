@@ -2,8 +2,8 @@ from PyQt5.QtWidgets import QWidget
 from package.ui.widgets.explorers import explorer
 
 class LocalExplorer(explorer.Explorer):
-    def __init__(self, parent, model, root: str):
-        super().__init__(parent, model, root)
+    def __init__(self, parent, model, action_status_popup, root: str):
+        super().__init__(parent, model, action_status_popup, root)
         
         self.directory_panel = self.LocalDirectoryPanel(self, root, "Local Dropbox")
         self.item_list = self.LocalItemList(self, model, self.current_directory)
@@ -52,8 +52,8 @@ class LocalExplorer(explorer.Explorer):
             super().__init__(parent, model, current_directory)
 
         def get_explorer_item(self, item_data: list):
-            return LocalExplorer.LocalExplorerItem(self, self.model, item_data[0], item_data[1])
+            return LocalExplorer.LocalExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
 
     class LocalExplorerItem(explorer.Explorer.ExplorerItem):
-        def __init__(self, parent, model,  path, is_file):
-            super().__init__(parent, model,  path, is_file)
+        def __init__(self, parent, explorer, model,  path, is_file):
+            super().__init__(parent, explorer, model,  path, is_file)

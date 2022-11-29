@@ -6,8 +6,8 @@ from package.ui.widgets.explorers import explorer
 from pathlib import Path
 
 class DropboxExplorer(explorer.Explorer):
-    def __init__(self, parent, model):
-        super().__init__(parent, model, "")
+    def __init__(self, parent, model, action_status_popup):
+        super().__init__(parent, model, action_status_popup, "")
         
         self.directory_panel = self.DropboxDirectoryPanel(self, "", "Dropbox Cloud")
         self.item_list = self.DropboxItemList(self, model, self.current_directory)
@@ -52,11 +52,11 @@ class DropboxExplorer(explorer.Explorer):
             super().__init__(parent, model, current_directory)
 
         def get_explorer_item(self, item_data: list):
-            return DropboxExplorer.DropboxExplorerItem(self, self.model, item_data[0], item_data[1])
+            return DropboxExplorer.DropboxExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
 
     class DropboxExplorerItem(explorer.Explorer.ExplorerItem):
-        def __init__(self, parent, model,  path, is_file):
-            super().__init__(parent, model,  path, is_file)
+        def __init__(self, parent, explorer, model,  path, is_file):
+            super().__init__(parent, explorer, model,  path, is_file)
             self.model = model # type: DropboxModel
 
         def create_right_click_menu(self):
@@ -71,6 +71,6 @@ class DropboxExplorer(explorer.Explorer):
             super().process_action(action)
             if action == 'Download':
                 download_path = QFileDialog.getSaveFileName(self, "Download Location", str(Path.home())+f"/Downloads/{self.basename}")[0]
-                # self.model.download(self.path, download_path)
-                self.model.perform_action('download', path=self.path, local_path=download_path)
+                description = f"Download {self.path} to {download_path}"
+                self.explorer.perform_action('download', path=self.path, local_path=download_path, description=description)
                 

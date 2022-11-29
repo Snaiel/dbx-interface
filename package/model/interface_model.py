@@ -1,4 +1,10 @@
 from PyQt5.QtCore import pyqtSignal, QObject
+from enum import Enum
+
+class ActionItemStatus(Enum):
+    QUEUED = 1
+    RUNNING = 2
+    DONE = 3
 
 class InterfaceModel(QObject):
     action_update = pyqtSignal(QObject, str)
@@ -30,3 +36,11 @@ class InterfaceModel(QObject):
         '''
         open the path for viewing
         '''
+
+class ExplorerAction(QObject):
+    action_update = pyqtSignal(ActionItemStatus)
+
+    def __init__(self, action: str, **kwargs) -> None:
+        super().__init__()
+        self.action = action
+        self.kwargs = kwargs

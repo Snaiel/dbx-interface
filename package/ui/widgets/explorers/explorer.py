@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication, QShortcut
-from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal, QObject, QSize
+from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor, QResizeEvent
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor
 from pathlib import Path
-from package.model.interface_model import InterfaceModel
+from package.model.interface_model import InterfaceModel, ExplorerAction
+from package.ui.widgets.actions_status import ActionStatusPopup
 
 class Explorer(QSplitter):
     '''
@@ -13,9 +14,10 @@ class Explorer(QSplitter):
     selection_num_changed = pyqtSignal(QObject, int)
     left_clicked = pyqtSignal(QWidget)
 
-    def __init__(self, parent, model, current_directory):
+    def __init__(self, parent, model: InterfaceModel, action_status_popup: ActionStatusPopup, current_directory: str):
         super().__init__(parent)
-        self.model = model # type: InterfaceModel
+        self.model = model
+        self.action_status_popup = action_status_popup
         self.current_directory = current_directory
         self.setChildrenCollapsible(False)
 
@@ -33,6 +35,11 @@ class Explorer(QSplitter):
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self.left_clicked.emit(self)
+
+    def perform_action(self, action: str, **kwargs):
+        ui_action = self.action_status_popup.add_action(kwargs['description'])
+        model_action = ExplorerAction(action, **kwargs)
+        self.model.perform_action(action, **kwargs)
 
     class DirectoryPanel(QWidget):
         '''
@@ -81,6 +88,7 @@ class Explorer(QSplitter):
         def __init__(self, parent, model, current_directory):
             super().__init__(parent)
 
+            self.explorer = parent
             self.model = model #type: InterfaceModel
             self.current_directory = current_directory
 
@@ -127,7 +135,7 @@ class Explorer(QSplitter):
             '''
             override to return an explorer item
             '''
-            return Explorer.ExplorerItem(self, self.model, item_data[0], item_data[1])
+            return Explorer.ExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
 
         @pyqtSlot(QMouseEvent)
         def right_clicked(self, event: QMouseEvent):
@@ -238,9 +246,10 @@ class Explorer(QSplitter):
     class ExplorerItem(QWidget):
         selection_state_changed = pyqtSignal(object)
 
-        def __init__(self, parent, model, path, is_file):
+        def __init__(self, parent, explorer, model, path, is_file):
             super().__init__(parent)
 
+            self.explorer = explorer
             self.model = model #type: InterfaceModel
             self.path = path
             self.basename = path.split('/')[-1]
@@ -318,20 +327,20 @@ class Explorer(QSplitter):
                     new_path = new_path[:-1]
                     new_path.append(text)
                     new_path = "/".join(new_path)
-                    # self.model.move(self.path, new_path)
-                    self.model.perform_action('move', path=self.path, new_path=new_path)
+                    description = f"Rename {self.path} to {new_path}"
+                    self.explorer.perform_action('move', path=self.path, new_path=new_path, description=description)
                     self.path = new_path
                     self.basename = text
             elif action == "Delete":
-                # self.model.delete(self.path)
-                self.model.perform_action('delete', path=self.path)
+                description = f"Delete {self.path}"
+                self.explorer.perform_action('delete', path=self.path, description=description)
                 self.deleteLater()
             elif action == 'Open':
-                # self.model.open_path(self.path)
-                self.model.perform_action('open', path=self.path)
+                description = f"Open {self.path}"
+                self.explorer.perform_action('open', path=self.path, description=description)
             elif action == 'Open Containing Folder':
                 parent = self
                 while not isinstance(parent, Explorer.ItemList):
                     parent = parent.parentWidget()
-                # self.model.open_path(parent.current_directory)
-                self.model.perform_action('open', path=parent.current_directory)
+                description = f"Open {parent.current_directory}"
+                self.explorer.perform_action('open', path=parent.current_directory, description=description)

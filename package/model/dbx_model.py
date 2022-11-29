@@ -41,22 +41,22 @@ class DropboxModel(InterfaceModel):
         thread = threading.Thread(target=ACTION_FUNC[action], kwargs=kwargs, daemon=True)
         thread.start()
 
-    def delete(self, path: str) -> None:
+    def delete(self, path: str, description: str) -> None:
         self.action_update.emit(self, f"deleting {path}")
         self.dbx.files_delete(path)
         self.action_update.emit(self, f"finished deleting {path}")
 
-    def move(self, path: str, new_path: str) -> None:
+    def move(self, path: str, new_path: str, description: str) -> None:
         self.action_update.emit(self, f"moving {path}")
         self.dbx.files_move(path, new_path)
         self.action_update.emit(self, f"finished moving {path}")
 
-    def open_path(self, path: str) -> None:
+    def open_path(self, path: str, description: str) -> None:
         self.action_update.emit(self, f"opening {path}")
         webbrowser.open(f"https://www.dropbox.com/home{path}")
         self.action_update.emit(self, f"opened {path}")
 
-    def download(self, path: str, local_path: str) -> None:
+    def download(self, path: str, local_path: str, description: str) -> None:
         self.action_update.emit(self, f"downloading {path}")
         # Checks if the path is a file or folder
         if isinstance(self.dbx.files_get_metadata(path), FileMetadata):

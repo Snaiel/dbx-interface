@@ -1,26 +1,19 @@
+from __future__ import annotations
+from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QScrollArea, QFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QEvent, Qt, QPoint
 from PyQt5.QtGui import QColor, QPainter, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget
-from pathlib import Path
-from package.ui.widgets.explorers.explorer import Explorer
-from enum import Enum
-
-class ActionItemStatus(Enum):
-    QUEUED = 1
-    RUNNING = 2
-    DONE = 3
+from package.model.interface_model import ActionItemStatus
 
 class ActionStatusPopup(QWidget):
 
     close_signal = pyqtSignal()
 
-    def __init__(self, parent, explorer: Explorer):
+    def __init__(self, parent):
         super().__init__(parent)
 
-        self.explorer = explorer
-
-        self.resize(explorer.size())
+        self.explorer : QWidget
 
         # make the window frameless
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -65,22 +58,28 @@ class ActionStatusPopup(QWidget):
         self.actions_list = QScrollArea()
         self.actions_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.actions_list.setFrameShape(QFrame.Shape.Box)
+        self.actions_list.setWidgetResizable(True)
         self.central_layout.addWidget(self.actions_list, 1, 0, 1, 2)
 
         self.list_widget = QWidget(self.actions_list)
-        self.list_layout = QVBoxLayout(self.list_widget)
-        self.list_widget.setLayout(self.list_layout)
-
-        for i in range(15):
-            self.list_layout.addWidget(ActionStatusPopup.ActionItem(self, f"Action {i}"))
-
         self.actions_list.setWidget(self.list_widget)
+
+        self.list_layout = QVBoxLayout(self.list_widget)
+        self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.central_widget.move(self.rect().center() - QPoint(int(self.central_widget.width() / 2), int(self.central_widget.height() / 2)))
 
-        explorer.installEventFilter(self)
-
         self.hide()
+
+    def set_explorer(self, explorer: QWidget):
+        explorer.installEventFilter(self)
+        self.explorer = explorer
+
+    def add_action(self, action: str) -> ActionStatusPopup.ActionItem:
+        print("ADD ACTRION")
+        action = ActionStatusPopup.ActionItem(self, action)
+        self.list_layout.addWidget(action)
+        return action
 
     def paintEvent(self, event):
         # dim the background
@@ -143,3 +142,6 @@ class ActionStatusPopup(QWidget):
             self.item_layout.addWidget(self.label)
             self.item_layout.addSpacing(140)
             self.item_layout.addWidget(self.icon, alignment=Qt.AlignmentFlag.AlignRight)
+
+        def set_icon(self, state: ActionItemStatus):
+            ACTION_ICON = {}
