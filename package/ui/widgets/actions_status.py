@@ -1,9 +1,15 @@
-from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QSizePolicy, QScrollArea, QFrame
+from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QScrollArea, QFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QEvent, Qt, QPoint
-from PyQt5.QtGui import QColor, QPainter, QMouseEvent, QResizeEvent
+from PyQt5.QtGui import QColor, QPainter, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget
 from pathlib import Path
 from package.ui.widgets.explorers.explorer import Explorer
+from enum import Enum
+
+class ActionItemStatus(Enum):
+    QUEUED = 1
+    RUNNING = 2
+    DONE = 3
 
 class ActionStatusPopup(QWidget):
 
@@ -66,7 +72,7 @@ class ActionStatusPopup(QWidget):
         self.list_widget.setLayout(self.list_layout)
 
         for i in range(15):
-            self.list_layout.addWidget(QLabel(f"bruh {i}"))
+            self.list_layout.addWidget(ActionStatusPopup.ActionItem(self, f"Action {i}"))
 
         self.actions_list.setWidget(self.list_widget)
 
@@ -112,3 +118,28 @@ class ActionStatusPopup(QWidget):
             self.show()
         else:
             self.hide()
+
+    class ActionItem(QWidget):
+        def __init__(self, parent, action_label):
+            super().__init__(parent)
+
+            self.setStyleSheet("QWidget::hover"
+                            "{"
+                            "background-color: #D2D2D2;"
+                            "}")
+
+            self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
+
+            self.item_layout = QHBoxLayout(self)
+            self.item_layout.setContentsMargins(8, 4, 8, 4)
+            
+            self.icon = QSvgWidget(str(Path(Path(__file__).parents[1], 'icons', "clock.svg")))
+            self.icon.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
+            self.icon.setMinimumWidth(12)
+
+            self.label = QLabel(action_label)
+
+            self.item_layout.addWidget(self.label)
+            self.item_layout.addSpacing(140)
+            self.item_layout.addWidget(self.icon, alignment=Qt.AlignmentFlag.AlignRight)
