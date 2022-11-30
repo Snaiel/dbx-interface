@@ -132,16 +132,16 @@ class ActionStatusPopup(QWidget):
 
             self.item_layout = QHBoxLayout(self)
             self.item_layout.setContentsMargins(8, 4, 8, 4)
+            self.item_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             
             self.icon = QSvgWidget(str(Path(Path(__file__).parents[1], 'icons', "clock.svg")))
             self.icon.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
-            self.icon.setMinimumWidth(12)
+            self.icon.setFixedWidth(20)
 
             self.label = QLabel(action_label)
 
+            self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
-            self.item_layout.addSpacing(140)
-            self.item_layout.addWidget(self.icon, alignment=Qt.AlignmentFlag.AlignRight)
 
         def set_icon(self, state: ActionItemStatus):
             ACTION_ICON = {}
