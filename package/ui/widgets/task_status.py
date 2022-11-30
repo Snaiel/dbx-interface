@@ -1,10 +1,10 @@
 from __future__ import annotations
 from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QScrollArea, QFrame
-from PyQt5.QtCore import pyqtSignal, QObject, QEvent, Qt, QPoint
+from PyQt5.QtCore import pyqtSignal, QObject, QEvent, Qt, QPoint, pyqtSlot
 from PyQt5.QtGui import QColor, QPainter, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget
-from package.model.interface_model import TaskItemStatus
+from package.model.interface_model import TaskItemStatus, ExplorerTask
 
 class TaskStatusPopup(QWidget):
 
@@ -118,6 +118,12 @@ class TaskStatusPopup(QWidget):
             self.hide()
 
     class TaskPopupItem(QWidget):
+        TASK_STATUS_TO_ICON_PATH = {
+            TaskItemStatus.QUEUED: str(Path(Path(__file__).parents[1], 'icons', "clock.svg")),
+            TaskItemStatus.RUNNING: str(Path(Path(__file__).parents[1], 'icons', "loading.svg")),
+            TaskItemStatus.DONE: str(Path(Path(__file__).parents[1], 'icons', "check-lg.svg"))
+        }
+
         def __init__(self, parent, action_label):
             super().__init__(parent)
 
@@ -135,12 +141,14 @@ class TaskStatusPopup(QWidget):
             
             self.icon = QSvgWidget(str(Path(Path(__file__).parents[1], 'icons', "clock.svg")))
             self.icon.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
-            self.icon.setFixedWidth(20)
+            self.icon.setFixedSize(20, 20)
 
             self.label = QLabel(action_label)
 
             self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
 
-        def set_icon(self, state: TaskItemStatus):
-            ACTION_ICON = {}
+        @pyqtSlot()
+        def receive_task_update(self, task: ExplorerTask):
+            print(vars(task))
+            self.icon.load(self.TASK_STATUS_TO_ICON_PATH[task.status])

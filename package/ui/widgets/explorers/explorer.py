@@ -39,6 +39,7 @@ class Explorer(QSplitter):
     def perform_task(self, action: str, **kwargs):
         ui_task = self.action_status_popup.add_action(kwargs['description'])
         model_task = ExplorerTask(action, **kwargs)
+        model_task.task_update.connect(lambda : ui_task.receive_task_update(model_task))
         self.model.perform_task(model_task)
 
     class DirectoryPanel(QWidget):

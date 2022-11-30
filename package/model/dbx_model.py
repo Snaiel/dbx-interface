@@ -1,4 +1,4 @@
-from package.model.interface_model import InterfaceModel, ExplorerTask
+from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItemStatus
 from dropbox import Dropbox
 from dropbox.files import FileMetadata
 import webbrowser
@@ -55,12 +55,19 @@ class DropboxModel(InterfaceModel):
         webbrowser.open(f"https://www.dropbox.com/home{path}")
 
     def download(self, task: ExplorerTask) -> None:
+        task.status = TaskItemStatus.RUNNING
+        task.emit_update()
+
         path = task.kwargs['path']
         local_path = task.kwargs['local_path']
 
         # Checks if the path is a file or folder
         if isinstance(self.dbx.files_get_metadata(path), FileMetadata):
             self.dbx.files_download_to_file(local_path, path)
+            task.emit_update()
         else:
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)
+
+        task.status = TaskItemStatus.DONE
+        task.emit_update()

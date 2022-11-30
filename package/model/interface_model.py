@@ -1,3 +1,4 @@
+from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal, QObject
 from enum import Enum
 
@@ -7,12 +8,16 @@ class TaskItemStatus(Enum):
     DONE = 3
 
 class ExplorerTask(QObject):
-    action_update = pyqtSignal(TaskItemStatus)
+    task_update = pyqtSignal()
 
     def __init__(self, action: str, **kwargs) -> None:
         super().__init__()
         self.action = action
+        self.status = TaskItemStatus.QUEUED
         self.kwargs = kwargs
+
+    def emit_update(self):
+        self.task_update.emit()
 
 class InterfaceModel(QObject):
 
