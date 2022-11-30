@@ -4,7 +4,7 @@ from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor,
 from PyQt5.QtSvg import QSvgWidget
 from pathlib import Path
 from package.model.interface_model import InterfaceModel, ExplorerAction
-from package.ui.widgets.actions_status import ActionStatusPopup
+from package.ui.widgets.task_status import TaskStatusPopup
 
 class Explorer(QSplitter):
     '''
@@ -14,7 +14,7 @@ class Explorer(QSplitter):
     selection_num_changed = pyqtSignal(QObject, int)
     left_clicked = pyqtSignal(QWidget)
 
-    def __init__(self, parent, model: InterfaceModel, action_status_popup: ActionStatusPopup, current_directory: str):
+    def __init__(self, parent, model: InterfaceModel, action_status_popup: TaskStatusPopup, current_directory: str):
         super().__init__(parent)
         self.model = model
         self.action_status_popup = action_status_popup

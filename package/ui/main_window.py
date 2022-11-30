@@ -1,7 +1,7 @@
 from package.ui.widgets.explorers.dbx_explorer import DropboxExplorer
 from package.ui.widgets.explorers.local_explorer import LocalExplorer
 from package.ui.widgets.statusbar import StatusBar
-from package.ui.widgets.actions_status import ActionStatusPopup
+from package.ui.widgets.task_status import TaskStatusPopup
 from package.model.dbx_model import DropboxModel
 from package.model.local_model import LocalModel
 from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QShortcut
@@ -23,9 +23,9 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
 
         # Action Status Popups
-        self.dbx_actions_status = ActionStatusPopup(self)
+        self.dbx_actions_status = TaskStatusPopup(self)
         self.status_bar.cloud.action_label_clicked.connect(self.dbx_actions_status.toggle)
-        self.local_actions_status = ActionStatusPopup(self)
+        self.local_actions_status = TaskStatusPopup(self)
         self.status_bar.local.action_label_clicked.connect(self.local_actions_status.toggle)
 
         # Dropbox Interface

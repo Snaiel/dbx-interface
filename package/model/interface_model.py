@@ -1,7 +1,7 @@
 from PyQt5.QtCore import pyqtSignal, QObject
 from enum import Enum
 
-class ActionItemStatus(Enum):
+class TaskItemStatus(Enum):
     QUEUED = 1
     RUNNING = 2
     DONE = 3
@@ -37,8 +37,8 @@ class InterfaceModel(QObject):
         open the path for viewing
         '''
 
-class ExplorerAction(QObject):
-    action_update = pyqtSignal(ActionItemStatus)
+class ExplorerTask(QObject):
+    action_update = pyqtSignal(TaskItemStatus)
 
     def __init__(self, action: str, **kwargs) -> None:
         super().__init__()

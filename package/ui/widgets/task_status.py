@@ -4,9 +4,9 @@ from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayo
 from PyQt5.QtCore import pyqtSignal, QObject, QEvent, Qt, QPoint
 from PyQt5.QtGui import QColor, QPainter, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget
-from package.model.interface_model import ActionItemStatus
+from package.model.interface_model import TaskItemStatus
 
-class ActionStatusPopup(QWidget):
+class TaskStatusPopup(QWidget):
 
     close_signal = pyqtSignal()
 
@@ -34,7 +34,7 @@ class ActionStatusPopup(QWidget):
 
         self.central_layout = QGridLayout(self.central_widget)
 
-        self.header = QLabel(self.central_widget, text="Actions")
+        self.header = QLabel(self.central_widget, text="Tasks")
         self.header.setFixedWidth(100)
         self.header.setStyleSheet(
             "padding: 2px 2px;"
@@ -75,9 +75,8 @@ class ActionStatusPopup(QWidget):
         explorer.installEventFilter(self)
         self.explorer = explorer
 
-    def add_action(self, action: str) -> ActionStatusPopup.ActionItem:
-        print("ADD ACTRION")
-        action = ActionStatusPopup.ActionItem(self, action)
+    def add_action(self, action: str) -> TaskStatusPopup.TaskPopupItem:
+        action = TaskStatusPopup.TaskPopupItem(self, action)
         self.list_layout.addWidget(action)
         return action
 
@@ -118,7 +117,7 @@ class ActionStatusPopup(QWidget):
         else:
             self.hide()
 
-    class ActionItem(QWidget):
+    class TaskPopupItem(QWidget):
         def __init__(self, parent, action_label):
             super().__init__(parent)
 
@@ -143,5 +142,5 @@ class ActionStatusPopup(QWidget):
             self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
 
-        def set_icon(self, state: ActionItemStatus):
+        def set_icon(self, state: TaskItemStatus):
             ACTION_ICON = {}

@@ -47,7 +47,7 @@ class StatusBar(QStatusBar):
             self.setLayout(self.section_layout)
             
             self.num_selected = QLabel("0 items selected")
-            self.action_status = QLabel("no actions performed")
+            self.action_status = QLabel("no tasks to perform")
             self.action_status.setStyleSheet("QWidget::hover"
                         "{"
                         "background-color: #D2D2D2;"
