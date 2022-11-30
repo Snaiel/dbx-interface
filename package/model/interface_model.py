@@ -6,8 +6,15 @@ class TaskItemStatus(Enum):
     RUNNING = 2
     DONE = 3
 
+class ExplorerTask(QObject):
+    action_update = pyqtSignal(TaskItemStatus)
+
+    def __init__(self, action: str, **kwargs) -> None:
+        super().__init__()
+        self.action = action
+        self.kwargs = kwargs
+
 class InterfaceModel(QObject):
-    action_update = pyqtSignal(QObject, str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -17,30 +24,22 @@ class InterfaceModel(QObject):
         retrieves a list of files and folders given a directory path
         '''
 
-    def perform_action(self, action: str, **kwargs):
+    def perform_task(self, task: ExplorerTask):
         '''
         performs a given action using multithreading
         '''
 
-    def delete(self, path: str) -> None:
+    def delete(self, task: ExplorerTask) -> None:
         '''
         delete the item at the specified path
         '''
 
-    def move(self, path: str, new_path: str) -> None:
+    def move(self, task: ExplorerTask) -> None:
         '''
         move the item from the specified path to new_path
         '''
 
-    def open_path(self, path: str) -> None:
+    def open_path(self, task: ExplorerTask) -> None:
         '''
         open the path for viewing
         '''
-
-class ExplorerTask(QObject):
-    action_update = pyqtSignal(TaskItemStatus)
-
-    def __init__(self, action: str, **kwargs) -> None:
-        super().__init__()
-        self.action = action
-        self.kwargs = kwargs

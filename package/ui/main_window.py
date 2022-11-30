@@ -30,8 +30,7 @@ class MainWindow(QMainWindow):
 
         # Dropbox Interface
         self.dbx_model = DropboxModel(dbx)
-        self.dbx_model.action_update.connect(self.status_bar.update_action_status)
-
+        
         self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_actions_status)
         self.dbx_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
         central_layout.addWidget(self.dbx_explorer, 0, 0)
@@ -39,7 +38,6 @@ class MainWindow(QMainWindow):
 
         # Local Interface
         self.local_model = LocalModel()
-        self.local_model.action_update.connect(self.status_bar.update_action_status)
 
         self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_actions_status, local_root)
         self.local_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)

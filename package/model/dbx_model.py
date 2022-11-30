@@ -1,4 +1,4 @@
-from package.model.interface_model import InterfaceModel
+from package.model.interface_model import InterfaceModel, ExplorerTask
 from dropbox import Dropbox
 from dropbox.files import FileMetadata
 import webbrowser
@@ -30,7 +30,7 @@ class DropboxModel(InterfaceModel):
 
         return file_list
 
-    def perform_action(self, action: str, **kwargs):
+    def perform_task(self, task: ExplorerTask):
         ACTION_FUNC = {
             'delete': self.delete,
             'move': self.move,
@@ -38,30 +38,29 @@ class DropboxModel(InterfaceModel):
             'download': self.download
         }
 
-        thread = threading.Thread(target=ACTION_FUNC[action], kwargs=kwargs, daemon=True)
+        thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
         thread.start()
 
-    def delete(self, path: str, description: str) -> None:
-        self.action_update.emit(self, f"deleting {path}")
+    def delete(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
         self.dbx.files_delete(path)
-        self.action_update.emit(self, f"finished deleting {path}")
 
-    def move(self, path: str, new_path: str, description: str) -> None:
-        self.action_update.emit(self, f"moving {path}")
+    def move(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        new_path = task.kwargs['new_path']
         self.dbx.files_move(path, new_path)
-        self.action_update.emit(self, f"finished moving {path}")
 
-    def open_path(self, path: str, description: str) -> None:
-        self.action_update.emit(self, f"opening {path}")
+    def open_path(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
         webbrowser.open(f"https://www.dropbox.com/home{path}")
-        self.action_update.emit(self, f"opened {path}")
 
-    def download(self, path: str, local_path: str, description: str) -> None:
-        self.action_update.emit(self, f"downloading {path}")
+    def download(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        local_path = task.kwargs['local_path']
+
         # Checks if the path is a file or folder
         if isinstance(self.dbx.files_get_metadata(path), FileMetadata):
             self.dbx.files_download_to_file(local_path, path)
         else:
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)
-        self.action_update.emit(self, f"finished downloading {path}")

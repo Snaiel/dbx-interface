@@ -72,5 +72,5 @@ class DropboxExplorer(explorer.Explorer):
             if action == 'Download':
                 download_path = QFileDialog.getSaveFileName(self, "Download Location", str(Path.home())+f"/Downloads/{self.basename}")[0]
                 description = f"Download {self.path} to {download_path}"
-                self.explorer.perform_action('download', path=self.path, local_path=download_path, description=description)
+                self.explorer.perform_task('download', path=self.path, local_path=download_path, description=description)
                 

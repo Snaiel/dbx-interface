@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal, QObjec
 from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor, QResizeEvent
 from PyQt5.QtSvg import QSvgWidget
 from pathlib import Path
-from package.model.interface_model import InterfaceModel, ExplorerAction
+from package.model.interface_model import InterfaceModel, ExplorerTask
 from package.ui.widgets.task_status import TaskStatusPopup
 
 class Explorer(QSplitter):
@@ -36,10 +36,10 @@ class Explorer(QSplitter):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self.left_clicked.emit(self)
 
-    def perform_action(self, action: str, **kwargs):
-        ui_action = self.action_status_popup.add_action(kwargs['description'])
-        model_action = ExplorerAction(action, **kwargs)
-        self.model.perform_action(action, **kwargs)
+    def perform_task(self, action: str, **kwargs):
+        ui_task = self.action_status_popup.add_action(kwargs['description'])
+        model_task = ExplorerTask(action, **kwargs)
+        self.model.perform_task(model_task)
 
     class DirectoryPanel(QWidget):
         '''
@@ -328,19 +328,19 @@ class Explorer(QSplitter):
                     new_path.append(text)
                     new_path = "/".join(new_path)
                     description = f"Rename {self.path} to {new_path}"
-                    self.explorer.perform_action('move', path=self.path, new_path=new_path, description=description)
+                    self.explorer.perform_task('move', path=self.path, new_path=new_path, description=description)
                     self.path = new_path
                     self.basename = text
             elif action == "Delete":
                 description = f"Delete {self.path}"
-                self.explorer.perform_action('delete', path=self.path, description=description)
+                self.explorer.perform_task('delete', path=self.path, description=description)
                 self.deleteLater()
             elif action == 'Open':
                 description = f"Open {self.path}"
-                self.explorer.perform_action('open', path=self.path, description=description)
+                self.explorer.perform_task('open', path=self.path, description=description)
             elif action == 'Open Containing Folder':
                 parent = self
                 while not isinstance(parent, Explorer.ItemList):
                     parent = parent.parentWidget()
                 description = f"Open {parent.current_directory}"
-                self.explorer.perform_action('open', path=parent.current_directory, description=description)
+                self.explorer.perform_task('open', path=parent.current_directory, description=description)
