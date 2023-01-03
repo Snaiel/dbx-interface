@@ -207,7 +207,8 @@ class Explorer(QSplitter):
                     self.explorer.perform_task('create_folder', path=path, description=description)
                 self.show_list_of_items(self.current_directory)
             elif action == 'Open Folder':
-                self.model.open_path(self.current_directory)
+                description = f"Open \"{self.current_directory}\""
+                self.explorer.perform_task('open', path=self.current_directory, description=description)
 
         class RectangleSelectionBackground(QWidget):
 
