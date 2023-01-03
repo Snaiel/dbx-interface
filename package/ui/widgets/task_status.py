@@ -77,7 +77,7 @@ class TaskStatusPopup(QWidget):
 
     def add_action(self, action: str) -> TaskStatusPopup.TaskPopupItem:
         action = TaskStatusPopup.TaskPopupItem(self, action)
-        self.list_layout.addWidget(action)
+        self.list_layout.insertWidget(0, action)
         return action
 
     def paintEvent(self, event):
