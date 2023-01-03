@@ -136,7 +136,7 @@ class TaskStatusPopup(QWidget):
             self.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
 
             self.item_layout = QHBoxLayout(self)
-            self.item_layout.setContentsMargins(8, 4, 8, 4)
+            self.item_layout.setContentsMargins(4, 4, 8, 4)
             self.item_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             
             self.icon = QSvgWidget(str(Path(Path(__file__).parents[1], 'icons', "clock.svg")))

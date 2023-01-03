@@ -33,13 +33,19 @@ class DropboxModel(InterfaceModel):
     def perform_task(self, task: ExplorerTask):
         ACTION_FUNC = {
             'delete': self.delete,
-            'move': self.move,
+            'rename': self.move,
             'open': self.open_path,
             'download': self.download
         }
 
+        task.status = TaskItemStatus.RUNNING
+        task.emit_update()
+
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
         thread.start()
+
+        task.status = TaskItemStatus.DONE
+        task.emit_update()
 
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
@@ -55,9 +61,6 @@ class DropboxModel(InterfaceModel):
         webbrowser.open(f"https://www.dropbox.com/home{path}")
 
     def download(self, task: ExplorerTask) -> None:
-        task.status = TaskItemStatus.RUNNING
-        task.emit_update()
-
         path = task.kwargs['path']
         local_path = task.kwargs['local_path']
 
@@ -68,6 +71,3 @@ class DropboxModel(InterfaceModel):
         else:
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)
-
-        task.status = TaskItemStatus.DONE
-        task.emit_update()

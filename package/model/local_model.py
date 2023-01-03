@@ -1,6 +1,6 @@
 from pathlib import Path
 import os, platform, subprocess, threading
-from package.model.interface_model import InterfaceModel
+from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItemStatus
 
 class LocalModel(InterfaceModel):
     def __init__(self) -> None:
@@ -16,26 +16,37 @@ class LocalModel(InterfaceModel):
 
         return file_list
 
-    def perform_task(self, action: str, **kwargs):
+    def perform_task(self, task: ExplorerTask):
+
         ACTION_FUNC = {
             'delete': self.delete,
-            'move': self.move,
+            'rename': self.rename,
             'open': self.open_path,
         }
 
-        thread = threading.Thread(target=ACTION_FUNC[action], kwargs=kwargs, daemon=True)
+        task.status = TaskItemStatus.RUNNING
+        task.emit_update()
+
+        thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
         thread.start()
 
-    def delete(self, path: str) -> None:
+        task.status = TaskItemStatus.DONE
+        task.emit_update()
+
+    def delete(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
         if os.path.isfile(path):
             os.remove(path)
         else:
             os.rmdir(path)
 
-    def move(self, path: str, new_path: str) -> None:
+    def rename(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        new_path = task.kwargs['new_path']
         os.rename(path, new_path)
 
-    def open_path(self, path: str) -> None:
+    def open_path(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
         if platform.system() == "Darwin":
             subprocess.Popen(["open", path])
         else:

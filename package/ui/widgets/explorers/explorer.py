@@ -324,24 +324,28 @@ class Explorer(QSplitter):
                 text, ok = QInputDialog.getText(self, "Rename", "What do you want to rename to?", text=self.basename)
                 if ok and text:
                     self.label.setText(text)
+                    self.setStyleSheet("QWidget::hover"
+                            "{"
+                            "   background-color: #D2D2D2;"
+                            "}")
                     new_path = self.path.split("/")
                     new_path = new_path[:-1]
                     new_path.append(text)
                     new_path = "/".join(new_path)
-                    description = f"Rename {self.path} to {new_path}"
-                    self.explorer.perform_task('move', path=self.path, new_path=new_path, description=description)
+                    description = f"Rename \"{self.path}\" to \"{new_path}\""
+                    self.explorer.perform_task('rename', path=self.path, new_path=new_path, description=description)
                     self.path = new_path
                     self.basename = text
             elif action == "Delete":
-                description = f"Delete {self.path}"
+                description = f"Delete \"{self.path}\""
                 self.explorer.perform_task('delete', path=self.path, description=description)
                 self.deleteLater()
             elif action == 'Open':
-                description = f"Open {self.path}"
+                description = f"Open \"{self.path}\""
                 self.explorer.perform_task('open', path=self.path, description=description)
             elif action == 'Open Containing Folder':
                 parent = self
                 while not isinstance(parent, Explorer.ItemList):
                     parent = parent.parentWidget()
-                description = f"Open {parent.current_directory}"
+                description = f"Open \"{parent.current_directory}\""
                 self.explorer.perform_task('open', path=parent.current_directory, description=description)
