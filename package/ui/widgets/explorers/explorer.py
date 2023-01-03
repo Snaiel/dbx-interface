@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication, QShortcut
+from PyQt5.QtWidgets import QWidget, QListWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QCheckBox, QLabel, QMenu, QSplitter, QInputDialog, QApplication, QMessageBox
 from PyQt5.QtCore import Qt, QEvent, QPoint, QRect, pyqtSlot, pyqtSignal, QObject, QSize
 from PyQt5.QtGui import QMouseEvent, QPixmap, QPainter, QBrush, QColor, QCursor, QResizeEvent
 from PyQt5.QtSvg import QSvgWidget
@@ -350,9 +350,16 @@ class Explorer(QSplitter):
                     self.path = new_path
                     self.basename = text
             elif action == "Delete":
-                description = f"Delete \"{self.path}\""
-                self.explorer.perform_task('delete', path=self.path, description=description)
-                self.deleteLater()
+                msg = QMessageBox(self)
+                msg.setText(f"Are you sure you want to delete \"{self.basename}\"?")
+                msg.setInformativeText("This cannot be undone.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes)
+                msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
+                answer = msg.exec()
+                if answer == QMessageBox.StandardButton.Yes:
+                    description = f"Delete \"{self.path}\""
+                    self.explorer.perform_task('delete', path=self.path, description=description)
+                    self.deleteLater()
             elif action == 'Open':
                 description = f"Open \"{self.path}\""
                 self.explorer.perform_task('open', path=self.path, description=description)
