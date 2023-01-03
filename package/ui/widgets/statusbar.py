@@ -2,8 +2,9 @@ from package.ui.widgets.explorers.dbx_explorer import DropboxExplorer
 from package.ui.widgets.explorers.local_explorer import LocalExplorer
 from package.model.dbx_model import DropboxModel
 from package.model.local_model import LocalModel
-from PyQt5.QtWidgets import QWidget, QLabel, QStatusBar, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QStatusBar, QHBoxLayout, QSizePolicy
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QEvent, Qt
+from PyQt5.QtGui import QResizeEvent
 
 class StatusBar(QStatusBar):
     def __init__(self):
@@ -23,9 +24,9 @@ class StatusBar(QStatusBar):
         statusbar_section.set_num_selected(num)
 
     @pyqtSlot(QObject, str)
-    def update_action_status(self, model: QObject, message: str):
+    def update_task_status(self, model: QObject, message: str):
         statusbar_section = self._get_statusbar_section(model) # type: StatusBar.StatusBarSection
-        statusbar_section.set_action_status(message)
+        statusbar_section.set_task_status(message)
 
     def _get_statusbar_section(self, origin: QObject):
         statusbar_section = None
@@ -37,7 +38,7 @@ class StatusBar(QStatusBar):
 
     class StatusBarSection(QWidget):
 
-        action_label_clicked = pyqtSignal()
+        tasks_label_clicked = pyqtSignal()
         
         def __init__(self):
             super().__init__()
@@ -47,24 +48,28 @@ class StatusBar(QStatusBar):
             self.setLayout(self.section_layout)
             
             self.num_selected = QLabel("0 items selected")
-            self.action_status = QLabel("no tasks to perform")
-            self.action_status.setStyleSheet("QWidget::hover"
+            self.task_status = QLabel("no tasks to perform")
+            self.task_status.setStyleSheet("QWidget::hover"
                         "{"
                         "background-color: #D2D2D2;"
                         "}")
 
-            self.action_status.installEventFilter(self)
+            self.task_status.installEventFilter(self)
 
             self.section_layout.addWidget(self.num_selected)
-            self.section_layout.addWidget(self.action_status)
+            self.section_layout.addWidget(self.task_status)
 
         def set_num_selected(self, num: int):
             self.num_selected.setText(f"{num} items selected")
 
-        def set_action_status(self, message: str):
-            self.action_status.setText(message)
+        def set_task_status(self, message: str):
+            self.task_status.setText(message)
 
         def eventFilter(self, object: QObject, event: QEvent) -> bool:
-            if object == self.action_status and event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
-                self.action_label_clicked.emit()
+            if object == self.task_status and event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
+                self.tasks_label_clicked.emit()
             return False    
+
+        def resizeEvent(self, event: QResizeEvent) -> None:
+            self.task_status.setMaximumWidth(int(self.width() * 0.7))
+            return super().resizeEvent(event)

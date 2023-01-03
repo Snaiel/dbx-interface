@@ -23,30 +23,32 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
 
         # Action Status Popups
-        self.dbx_actions_status = TaskStatusPopup(self)
-        self.status_bar.cloud.action_label_clicked.connect(self.dbx_actions_status.toggle)
-        self.local_actions_status = TaskStatusPopup(self)
-        self.status_bar.local.action_label_clicked.connect(self.local_actions_status.toggle)
+        self.dbx_tasks_status = TaskStatusPopup(self)
+        self.status_bar.cloud.tasks_label_clicked.connect(self.dbx_tasks_status.toggle)
+        self.local_tasks_status = TaskStatusPopup(self)
+        self.status_bar.local.tasks_label_clicked.connect(self.local_tasks_status.toggle)
 
         # Dropbox Interface
         self.dbx_model = DropboxModel(dbx)
         
-        self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_actions_status)
+        self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_tasks_status)
         self.dbx_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
+        self.dbx_explorer.task_status_changed.connect(self.status_bar.update_task_status)
         central_layout.addWidget(self.dbx_explorer, 0, 0)
         self.dbx_explorer.left_clicked.connect(self.explorer_focus)
 
         # Local Interface
         self.local_model = LocalModel()
 
-        self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_actions_status, local_root)
+        self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_tasks_status, local_root)
         self.local_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
+        self.local_explorer.task_status_changed.connect(self.status_bar.update_task_status)
         central_layout.addWidget(self.local_explorer, 0, 1)
         central_layout.setSpacing(0)
         self.local_explorer.left_clicked.connect(self.explorer_focus)
 
-        self.dbx_actions_status.set_explorer(self.dbx_explorer)
-        self.local_actions_status.set_explorer(self.local_explorer)
+        self.dbx_tasks_status.set_explorer(self.dbx_explorer)
+        self.local_tasks_status.set_explorer(self.local_explorer)
 
         # Set the initial focused explorer
         self.focused_explorer = self.dbx_explorer

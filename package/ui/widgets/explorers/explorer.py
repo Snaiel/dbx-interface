@@ -12,6 +12,7 @@ class Explorer(QSplitter):
     '''
 
     selection_num_changed = pyqtSignal(QObject, int)
+    task_status_changed = pyqtSignal(QObject, str)
     left_clicked = pyqtSignal(QWidget)
 
     def __init__(self, parent, model: InterfaceModel, action_status_popup: TaskStatusPopup, current_directory: str):
@@ -40,6 +41,7 @@ class Explorer(QSplitter):
         ui_task = self.action_status_popup.add_action(kwargs['description'])
         model_task = ExplorerTask(action, **kwargs)
         model_task.task_update.connect(lambda : ui_task.receive_task_update(model_task))
+        model_task.task_update.connect(lambda : self.task_status_changed.emit(self, model_task.kwargs['description']))
         self.model.perform_task(model_task)
 
     class DirectoryPanel(QWidget):
