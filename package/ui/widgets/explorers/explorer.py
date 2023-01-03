@@ -180,7 +180,7 @@ class Explorer(QSplitter):
                 self.selected_items.remove(item)
             else:
                 self.selected_items.append(item)
-            self.selection_num_changed.emit(self.parent(), len(self.selected_items))
+            self.selection_num_changed.emit(len(self.selected_items))
 
         def select_all(self):
             for i in range(len(self.list_layout)):
