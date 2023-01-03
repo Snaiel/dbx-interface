@@ -96,10 +96,7 @@ class Explorer(QSplitter):
             self.selected_items = []
 
             # right click menu
-            self.menu = QMenu(self)
-            self.menu.addAction("Refresh")
-            self.menu.addAction("Open Folder")
-            self.menu.installEventFilter(self)
+            self._create_right_click_menu()
 
             self.background_widget = Explorer.ItemList.RectangleSelectionBackground(self)
             self.background_widget.right_clicked.connect(self.right_clicked)
@@ -117,6 +114,13 @@ class Explorer(QSplitter):
             self.list_layout.setContentsMargins(4, 16, 20, 16)
 
             self.show_list_of_items(self.current_directory)
+
+        def _create_right_click_menu(self):
+            self.menu = QMenu(self)
+            self.menu.addAction("Refresh")
+            self.menu.addAction("Create Folder")
+            self.menu.addAction("Open Folder")
+            self.menu.installEventFilter(self)
 
         def show_list_of_items(self, directory):
             while self.list_layout.count():
@@ -190,6 +194,15 @@ class Explorer(QSplitter):
 
         def process_action(self, action: str) -> None:
             if action == 'Refresh':
+                self.show_list_of_items(self.current_directory)
+            if action == 'Create Folder':
+                text, ok = QInputDialog.getText(self, "Create Folder", "Enter name of new folder:")
+                if ok and text:
+                    path = self.explorer.current_directory.split("/")
+                    path.append(text)
+                    path = "/".join(path)
+                    description = f"Create folder \"{path}\""
+                    self.explorer.perform_task('create_folder', path=path, description=description)
                 self.show_list_of_items(self.current_directory)
             elif action == 'Open Folder':
                 self.model.open_path(self.current_directory)
@@ -282,11 +295,11 @@ class Explorer(QSplitter):
             self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
 
-            self.create_right_click_menu()
+            self._create_right_click_menu()
 
             self.menu.installEventFilter(self)
 
-        def create_right_click_menu(self):
+        def _create_right_click_menu(self):
             self.menu = QMenu(self)
             self.menu.addAction("Rename")
             self.menu.addAction("Delete")

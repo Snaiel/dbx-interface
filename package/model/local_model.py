@@ -19,6 +19,7 @@ class LocalModel(InterfaceModel):
     def perform_task(self, task: ExplorerTask):
 
         ACTION_FUNC = {
+            'create_folder': self.create_folder,
             'delete': self.delete,
             'rename': self.rename,
             'open': self.open_path,
@@ -32,6 +33,10 @@ class LocalModel(InterfaceModel):
 
         task.status = TaskItemStatus.DONE
         task.emit_update()
+
+    def create_folder(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        os.mkdir(path)
 
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']

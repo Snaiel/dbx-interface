@@ -32,6 +32,7 @@ class DropboxModel(InterfaceModel):
 
     def perform_task(self, task: ExplorerTask):
         ACTION_FUNC = {
+            'create_folder': self.create_folder,
             'delete': self.delete,
             'rename': self.move,
             'open': self.open_path,
@@ -46,6 +47,10 @@ class DropboxModel(InterfaceModel):
 
         task.status = TaskItemStatus.DONE
         task.emit_update()
+
+    def create_folder(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        self.dbx.files_create_folder(path, True)
 
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
