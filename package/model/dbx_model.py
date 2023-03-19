@@ -72,7 +72,6 @@ class DropboxModel(InterfaceModel):
         # Checks if the path is a file or folder
         if isinstance(self.dbx.files_get_metadata(path), FileMetadata):
             self.dbx.files_download_to_file(local_path, path)
-            task.emit_update()
         else:
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)

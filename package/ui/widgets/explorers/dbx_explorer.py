@@ -59,8 +59,8 @@ class DropboxExplorer(explorer.Explorer):
             super().__init__(parent, explorer, model,  path, is_file)
             self.model = model # type: DropboxModel
 
-        def create_right_click_menu(self):
-            super().create_right_click_menu()
+        def _create_right_click_menu(self):
+            super()._create_right_click_menu()
             self.menu.addSeparator()
             self.menu.addAction("Download")
 
