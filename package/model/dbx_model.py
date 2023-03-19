@@ -1,10 +1,11 @@
 from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItemStatus
 from dropbox import Dropbox
 from dropbox.files import FileMetadata
-import webbrowser
-import threading
+import webbrowser, threading, os
 
 class DropboxModel(InterfaceModel):
+
+    MAX_BUCKET_SIZE = 50 # in megabytes
 
     def __init__(self, dbx) -> None:
         super().__init__()
@@ -36,7 +37,8 @@ class DropboxModel(InterfaceModel):
             'delete': self.delete,
             'rename': self.move,
             'open': self.open_path,
-            'download': self.download
+            'download': self.download,
+            'upload': self.upload
         }
 
         task.status = TaskItemStatus.RUNNING
@@ -75,3 +77,13 @@ class DropboxModel(InterfaceModel):
         else:
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)
+
+    def upload(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        dbx_path = task.kwargs['dbx_path']
+        file_size_MB = os.path.getsize(path) / (1000 ** 2)
+        if file_size_MB < self.MAX_BUCKET_SIZE:
+            with open(path, 'rb') as file:
+                data = file.read()
+                self.dbx.files_upload(data, dbx_path)
+        # TODO: folder uploads and files bigger than MAX_BUCKET_SIZE

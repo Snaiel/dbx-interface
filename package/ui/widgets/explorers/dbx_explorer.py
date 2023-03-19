@@ -53,6 +53,19 @@ class DropboxExplorer(explorer.Explorer):
 
         def get_explorer_item(self, item_data: list):
             return DropboxExplorer.DropboxExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
+        
+        def _create_right_click_menu(self):
+            super()._create_right_click_menu()
+            self.menu.addSeparator()
+            self.menu.addAction("Upload to here")
+
+        def process_action(self, action: str) -> None:
+            super().process_action(action)
+            if action == 'Upload to here':
+                file_path = QFileDialog.getOpenFileName(self, "Select File to Upload", str(Path.home()))[0]
+                dbx_path = self.current_directory + f"/{Path(file_path).name}"
+                description = f"Upload \"{file_path}\" to \"{self.current_directory}\""
+                self.explorer.perform_task('upload', path=file_path, dbx_path=dbx_path, description=description)
 
     class DropboxExplorerItem(explorer.Explorer.ExplorerItem):
         def __init__(self, parent, explorer, model,  path, is_file):
