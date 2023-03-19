@@ -34,6 +34,18 @@ class InterfaceModel(QObject):
         performs a given action using multithreading
         '''
 
+    def add_status_updates(func):
+        def inner(self, task: ExplorerTask):
+            task.status = TaskItemStatus.RUNNING
+            task.emit_update()
+
+            func(self, task)
+
+            task.status = TaskItemStatus.DONE
+            task.emit_update()
+
+        return inner
+
     def delete(self, task: ExplorerTask) -> None:
         '''
         delete the item at the specified path

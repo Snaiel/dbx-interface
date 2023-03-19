@@ -25,19 +25,18 @@ class LocalModel(InterfaceModel):
             'open': self.open_path,
         }
 
-        task.status = TaskItemStatus.RUNNING
-        task.emit_update()
-
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
         thread.start()
 
-        task.status = TaskItemStatus.DONE
-        task.emit_update()
+    def add_status_updates(func):
+        return super().add_status_updates()
 
+    @add_status_updates
     def create_folder(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         os.mkdir(path)
 
+    @add_status_updates
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         if os.path.isfile(path):
@@ -45,11 +44,13 @@ class LocalModel(InterfaceModel):
         else:
             os.rmdir(path)
 
+    @add_status_updates
     def rename(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         new_path = task.kwargs['new_path']
         os.rename(path, new_path)
 
+    @add_status_updates
     def open_path(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         if platform.system() == "Darwin":
