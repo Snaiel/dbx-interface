@@ -1,7 +1,10 @@
 from PyQt5.QtWidgets import QWidget
-from package.ui.widgets.explorers import explorer
+from package.ui.widgets.explorers.base.explorer import Explorer
+from package.ui.widgets.explorers.base.directory_panel import DirectoryPanel
+from package.ui.widgets.explorers.base.item_list import ItemList
+from package.ui.widgets.explorers.base.explorer_item import ExplorerItem
 
-class LocalExplorer(explorer.Explorer):
+class LocalExplorer(Explorer):
     def __init__(self, parent, model, action_status_popup, root: str):
         super().__init__(parent, model, action_status_popup, root)
         
@@ -19,7 +22,7 @@ class LocalExplorer(explorer.Explorer):
         self.setStretchFactor(0, 0)
         self.setStretchFactor(1, 1)
 
-    class LocalDirectoryPanel(explorer.Explorer.DirectoryPanel):
+    class LocalDirectoryPanel(DirectoryPanel):
         def __init__(self, parent: QWidget, current_directory: str, header: str):
             super().__init__(parent, current_directory, header)
 
@@ -47,13 +50,13 @@ class LocalExplorer(explorer.Explorer):
             self.change_displayed_directories(new_path)
             self.parentWidget().change_explorer_directory(new_path)
 
-    class LocalItemList(explorer.Explorer.ItemList):
+    class LocalItemList(ItemList):
         def __init__(self, parent, model, current_directory):
             super().__init__(parent, model, current_directory)
 
         def get_explorer_item(self, item_data: list):
             return LocalExplorer.LocalExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
 
-    class LocalExplorerItem(explorer.Explorer.ExplorerItem):
+    class LocalExplorerItem(ExplorerItem):
         def __init__(self, parent, explorer, model,  path, is_file):
             super().__init__(parent, explorer, model,  path, is_file)

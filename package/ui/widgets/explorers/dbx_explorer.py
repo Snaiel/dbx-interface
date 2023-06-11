@@ -1,11 +1,12 @@
-from posixpath import basename
+from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtCore import QEvent
-from package.model.dbx_model import DropboxModel
-from package.ui.widgets.explorers import explorer
-from pathlib import Path
+from package.ui.widgets.explorers.base.explorer import Explorer
+from package.ui.widgets.explorers.base.directory_panel import DirectoryPanel
+from package.ui.widgets.explorers.base.item_list import ItemList
+from package.ui.widgets.explorers.base.explorer_item import ExplorerItem
 
-class DropboxExplorer(explorer.Explorer):
+class DropboxExplorer(Explorer):
     def __init__(self, parent, model, action_status_popup):
         super().__init__(parent, model, action_status_popup, "")
         
@@ -23,7 +24,7 @@ class DropboxExplorer(explorer.Explorer):
         self.setStretchFactor(0, 0)
         self.setStretchFactor(1, 1)
 
-    class DropboxDirectoryPanel(explorer.Explorer.DirectoryPanel):
+    class DropboxDirectoryPanel(DirectoryPanel):
         def __init__(self, parent: QWidget, current_directory: str, header: str):
             super().__init__(parent, current_directory, header)
             self.list_widget.addItem("My Dropbox")
@@ -47,7 +48,7 @@ class DropboxExplorer(explorer.Explorer):
             self.change_displayed_directories(new_path)
             self.parentWidget().change_explorer_directory(new_path)
 
-    class DropboxItemList(explorer.Explorer.ItemList):
+    class DropboxItemList(ItemList):
         def __init__(self, parent, model, current_directory):
             super().__init__(parent, model, current_directory)
 
@@ -67,10 +68,9 @@ class DropboxExplorer(explorer.Explorer):
                 description = f"Upload \"{file_path}\" to \"{self.current_directory}\""
                 self.explorer.perform_task('upload', path=file_path, dbx_path=dbx_path, description=description)
 
-    class DropboxExplorerItem(explorer.Explorer.ExplorerItem):
+    class DropboxExplorerItem(ExplorerItem):
         def __init__(self, parent, explorer, model,  path, is_file):
             super().__init__(parent, explorer, model,  path, is_file)
-            self.model = model # type: DropboxModel
 
         def _create_right_click_menu(self):
             super()._create_right_click_menu()
