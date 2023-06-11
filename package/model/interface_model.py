@@ -21,8 +21,13 @@ class ExplorerTask(QObject):
 
 class InterfaceModel(QObject):
 
+    refresh_signal = pyqtSignal()
+
     def __init__(self) -> None:
         super().__init__()
+
+    def refresh(self):
+        self.refresh_signal.emit()
 
     def get_list_of_paths(self, directory: str) -> list:
         '''

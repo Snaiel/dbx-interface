@@ -2,7 +2,6 @@ from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItem
 from dropbox import Dropbox
 from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo
 import webbrowser, threading, os
-from pathlib import Path
 
 class DropboxModel(InterfaceModel):
 
@@ -40,7 +39,8 @@ class DropboxModel(InterfaceModel):
             'rename': self.move,
             'open': self.open_path,
             'download': self.download,
-            'upload': self.upload
+            'upload_file': self.upload_file,
+            'upload_folder': self.upload_folder
         }
 
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
@@ -83,7 +83,7 @@ class DropboxModel(InterfaceModel):
             self.dbx.files_download_zip_to_file(local_path, path)
 
     @status_update
-    def upload(self, task: ExplorerTask) -> None:
+    def upload_file(self, task: ExplorerTask) -> None:
         BYTES_TO_MEGABYTES = 1000 ** 2
         MAX_BUCKET_SIZE_BYTES = BYTES_TO_MEGABYTES * self.MAX_BUCKET_SIZE
 
@@ -129,4 +129,22 @@ class DropboxModel(InterfaceModel):
 
                 self.dbx.files_upload_session_finish(None, session_cursor, commit_info)
 
-        # TODO: folder uploads and multiple files
+        if 'from_folder' not in task.kwargs:
+            self.refresh()
+
+    @status_update
+    def upload_folder(self, task: ExplorerTask):
+        path = task.kwargs['path']
+        dbx_path = task.kwargs['dbx_path']
+
+        for dirpath, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                # construct the full local path
+                file_local_path = os.path.join(dirpath, filename)
+
+                # construct the full Dropbox path
+                file_relative_path = os.path.relpath(file_local_path, path)
+                file_dropbox_path = os.path.join(dbx_path, file_relative_path)
+                self.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_dropbox_path, from_folder=True))
+
+        self.refresh()
