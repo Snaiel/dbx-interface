@@ -44,31 +44,31 @@ class DropboxModel(InterfaceModel):
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
         thread.start()
 
-    def add_status_updates(func):
-        return super().add_status_updates()
+    def status_update(func):
+        return InterfaceModel.status_update(func)
 
-    @add_status_updates
+    @status_update
     def create_folder(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         self.dbx.files_create_folder(path, True)
 
-    @add_status_updates
+    @status_update
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         self.dbx.files_delete(path)
 
-    @add_status_updates
+    @status_update
     def move(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         new_path = task.kwargs['new_path']
         self.dbx.files_move(path, new_path)
 
-    @add_status_updates
+    @status_update
     def open_path(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         webbrowser.open(f"https://www.dropbox.com/home{path}")
 
-    @add_status_updates
+    @status_update
     def download(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         local_path = task.kwargs['local_path']
@@ -80,7 +80,7 @@ class DropboxModel(InterfaceModel):
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)
 
-    @add_status_updates
+    @status_update
     def upload(self, task: ExplorerTask) -> None:
         BYTES_TO_MEGABYTES = 1000 ** 2
         MAX_BUCKET_SIZE_BYTES = BYTES_TO_MEGABYTES * self.MAX_BUCKET_SIZE

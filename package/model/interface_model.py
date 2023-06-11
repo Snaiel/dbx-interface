@@ -34,7 +34,7 @@ class InterfaceModel(QObject):
         performs a given action using multithreading
         '''
 
-    def add_status_updates(func):
+    def status_update(func):
         def inner(self, task: ExplorerTask):
             task.status = TaskItemStatus.RUNNING
             task.emit_update()
