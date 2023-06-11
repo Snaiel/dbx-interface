@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         self.status_bar.local.tasks_label_clicked.connect(self.local_tasks_status.toggle)
 
         # Dropbox Interface
-        self.dbx_model = DropboxModel(dbx)
+        self.dbx_model = DropboxModel(dbx, local_root)
         
         self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_tasks_status)
         self.dbx_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)

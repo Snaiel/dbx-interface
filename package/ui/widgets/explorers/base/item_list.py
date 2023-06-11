@@ -12,6 +12,7 @@ class ItemList(QScrollArea):
 
     left_clicked = pyqtSignal(QWidget)
     selection_num_changed = pyqtSignal(int)
+    perform_task = pyqtSignal(str, dict)
 
     def __init__(self, parent, model, current_directory):
         super().__init__(parent)
@@ -23,7 +24,7 @@ class ItemList(QScrollArea):
         self.selected_items = []
 
         # right click menu
-        self._create_right_click_menu()
+        self.create_right_click_menu()
 
         self.background_widget = RectangleSelectionBackground(self)
         self.background_widget.right_clicked.connect(self.right_clicked)
@@ -42,12 +43,16 @@ class ItemList(QScrollArea):
 
         self.show_list_of_items(self.current_directory)
 
-    def _create_right_click_menu(self):
+    def create_right_click_menu(self):
         self.menu = QMenu(self)
         self.menu.addAction("Refresh")
         self.menu.addAction("Create Folder")
         self.menu.addAction("Open Folder")
         self.menu.installEventFilter(self)
+
+    @pyqtSlot(str, dict)
+    def emit_item_list_perform_action(self, action, kwargs):
+        self.perform_task.emit(action, kwargs)
 
     def show_list_of_items(self, directory):
         while self.list_layout.count():
@@ -59,6 +64,7 @@ class ItemList(QScrollArea):
 
         for i in data:
             explorer_item = self.get_explorer_item(i)
+            explorer_item.perform_task.connect(self.emit_item_list_perform_action)
             explorer_item.installEventFilter(self)
             explorer_item.selection_state_changed.connect(self.item_selection_state_changed)
             self.list_layout.addWidget(explorer_item)
@@ -129,8 +135,8 @@ class ItemList(QScrollArea):
                 path.append(text)
                 path = "/".join(path)
                 description = f"Create folder \"{path}\""
-                self.explorer.perform_task('create_folder', path=path, description=description)
+                self.perform_task.emit('create_folder', {"path":path, "description":description})
             self.show_list_of_items(self.current_directory)
         elif action == 'Open Folder':
             description = f"Open \"{self.current_directory}\""
-            self.explorer.perform_task('open', path=self.current_directory, description=description)
+            self.perform_task.emit('open', {"path":self.current_directory, "description":description})

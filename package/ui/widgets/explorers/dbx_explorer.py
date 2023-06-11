@@ -17,6 +17,7 @@ class DropboxExplorer(Explorer):
 
         self.directory_panel.left_clicked.connect(self.mouseReleaseEvent)
         self.item_list.left_clicked.connect(self.mouseReleaseEvent)
+        self.item_list.perform_task.connect(self.process_task)
 
         self.addWidget(self.directory_panel)
         self.addWidget(self.item_list)
@@ -55,8 +56,8 @@ class DropboxExplorer(Explorer):
         def get_explorer_item(self, item_data: list):
             return DropboxExplorer.DropboxExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
         
-        def _create_right_click_menu(self):
-            super()._create_right_click_menu()
+        def create_right_click_menu(self):
+            super().create_right_click_menu()
             self.menu.addSeparator()
             self.menu.addAction("Upload to here")
 
@@ -72,8 +73,8 @@ class DropboxExplorer(Explorer):
         def __init__(self, parent, explorer, model,  path, is_file):
             super().__init__(parent, explorer, model,  path, is_file)
 
-        def _create_right_click_menu(self):
-            super()._create_right_click_menu()
+        def create_right_click_menu(self):
+            super().create_right_click_menu()
             self.menu.addSeparator()
             self.menu.addAction("Download")
 
@@ -85,5 +86,4 @@ class DropboxExplorer(Explorer):
             if action == 'Download':
                 download_path = QFileDialog.getSaveFileName(self, "Download Location", str(Path.home())+f"/Downloads/{self.basename}")[0]
                 description = f"Download \"{self.path}\" to \"{download_path}\""
-                self.explorer.perform_task('download', path=self.path, local_path=download_path, description=description)
-                
+                self.perform_task.emit('download', {"path":self.path, "local_path":download_path, "description":description})

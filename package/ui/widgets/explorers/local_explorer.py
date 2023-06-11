@@ -15,6 +15,7 @@ class LocalExplorer(Explorer):
 
         self.directory_panel.left_clicked.connect(self.mouseReleaseEvent)
         self.item_list.left_clicked.connect(self.mouseReleaseEvent)
+        self.item_list.perform_task.connect(self.process_task)
 
         self.addWidget(self.directory_panel)
         self.addWidget(self.item_list)

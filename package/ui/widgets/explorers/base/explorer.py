@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QSplitter
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
 from PyQt5.QtGui import QMouseEvent
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from package.ui.widgets.explorers.base.directory_panel import DirectoryPanel
@@ -37,7 +37,8 @@ class Explorer(QSplitter):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self.left_clicked.emit(self)
 
-    def perform_task(self, action: str, **kwargs):
+    @pyqtSlot(str, dict)
+    def process_task(self, action: str, kwargs):
         ui_task = self.action_status_popup.add_action(kwargs['description'])
         model_task = ExplorerTask(action, **kwargs)
         model_task.task_update.connect(lambda : ui_task.receive_task_update(model_task))

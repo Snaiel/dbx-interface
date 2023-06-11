@@ -2,14 +2,16 @@ from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItem
 from dropbox import Dropbox
 from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo
 import webbrowser, threading, os
+from pathlib import Path
 
 class DropboxModel(InterfaceModel):
 
     MAX_BUCKET_SIZE = 50 # in megabytes
 
-    def __init__(self, dbx) -> None:
+    def __init__(self, dbx, local_root) -> None:
         super().__init__()
         self.dbx = dbx #type: Dropbox
+        self.local_root = local_root
 
     def get_list_of_paths(self, root: str) -> list:
         file_list = []

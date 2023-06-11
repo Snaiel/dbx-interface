@@ -6,7 +6,9 @@ from PyQt5.QtSvg import QSvgWidget
 from package.model.interface_model import InterfaceModel
 
 class ExplorerItem(QWidget):
+
     selection_state_changed = pyqtSignal(object)
+    perform_task = pyqtSignal(str, dict)
 
     def __init__(self, parent, explorer, model, path, is_file):
         super().__init__(parent)
@@ -44,11 +46,11 @@ class ExplorerItem(QWidget):
         self.item_layout.addWidget(self.icon)
         self.item_layout.addWidget(self.label)
 
-        self._create_right_click_menu()
+        self.create_right_click_menu()
 
         self.menu.installEventFilter(self)
 
-    def _create_right_click_menu(self):
+    def create_right_click_menu(self):
         self.menu = QMenu(self)
         self.menu.addAction("Rename")
         self.menu.addAction("Delete")
@@ -95,7 +97,7 @@ class ExplorerItem(QWidget):
                 new_path.append(text)
                 new_path = "/".join(new_path)
                 description = f"Rename \"{self.path}\" to \"{new_path}\""
-                self.explorer.perform_task('rename', path=self.path, new_path=new_path, description=description)
+                self.perform_task.emit('rename', {"path":self.path, "new_path":new_path, "description":description})
                 self.path = new_path
                 self.basename = text
         elif action == "Delete":
@@ -107,12 +109,12 @@ class ExplorerItem(QWidget):
             answer = msg.exec()
             if answer == QMessageBox.StandardButton.Yes:
                 description = f"Delete \"{self.path}\""
-                self.explorer.perform_task('delete', path=self.path, description=description)
+                self.perform_task.emit('delete', {"path":self.path, "description":description})
                 self.deleteLater()
         elif action == 'Open':
             description = f"Open \"{self.path}\""
-            self.explorer.perform_task('open', path=self.path, description=description)
+            self.perform_task.emit('open', path=self.path, description=description)
         elif action == 'Open Containing Folder':
             parent = self.item_list
             description = f"Open \"{parent.current_directory}\""
-            self.explorer.perform_task('open', path=parent.current_directory, description=description)
+            self.perform_task.emit('open', {"path":parent.current_directory, "description":description})
