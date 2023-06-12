@@ -12,7 +12,7 @@ def run(setup: bool = False) -> int:
     if not Path(Path(__file__).parents[1], 'config.json').is_file() or setup:
         if not run_setup():
             return 0
-
+        
     dbx = utils.create_dbx()
     if not utils.validate_dbx(dbx):
         print("ERROR: The provided Dropbox info is invalid")
@@ -31,6 +31,8 @@ def run(setup: bool = False) -> int:
             print("ERROR: You must provide the location of your local Dropbox folder.")
             print_error_help()
             return 0
+        
+    utils.clean_synced_paths(json_data['DROPBOX_LOCATION'])
 
     window = MainWindow(dbx, json_data['DROPBOX_LOCATION'])
     window.show()

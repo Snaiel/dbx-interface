@@ -4,15 +4,15 @@ Takes care of auth and gets the files & folders
 """
 
 from pathlib import Path
-import requests
-import json
+import requests, json, os
 from dropbox import Dropbox
 from dropbox.exceptions import AuthError
 
-project_root = Path(Path(__file__).parents[2])
+PROJECT_ROOT = Path(__file__).parents[1]
+CONFIG_PATH = Path(PROJECT_ROOT, 'config.json')
 
 def create_dbx() -> Dropbox:
-    with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
+    with open(CONFIG_PATH, 'r+') as json_file:
         json_data = json.load(json_file)
         # print(json_data)
 
@@ -31,7 +31,7 @@ def validate_dbx(dbx: Dropbox) -> bool:
     except AuthError:
         return False
 
-def create_config(code, app_key, app_secret, dropbox_location):
+def create_config(code, app_key, app_secret, dropbox_location) -> None:
     data = {
             'code': code,
             'grant_type': 'authorization_code',
@@ -45,13 +45,30 @@ def create_config(code, app_key, app_secret, dropbox_location):
         'APP_KEY': app_key,
         'APP_SECRET': app_secret,
         'ACCESS_TOKEN': r_data["access_token"],
-        'REFRESH_TOKEN': r_data["refresh_token"]
+        'REFRESH_TOKEN': r_data["refresh_token"],
+        'SYNCED_PATHS': {}
     }
 
-    with open(Path(project_root, "config.json"), "w") as json_file:
+    with open(CONFIG_PATH, "w") as json_file:
         json.dump(config_data, json_file, indent=4)
 
 def read_config() -> dict:
-    with open(Path(project_root, "config.json"), 'r') as json_file:
+    with open(CONFIG_PATH, 'r') as json_file:
         config_data = json.load(json_file)
         return config_data
+    
+def clean_synced_paths(local_dbx_path: str) -> None:
+    print("Cleaning SYNCED_PATHS")
+    files = []
+
+    for dirpath, dirnames, filenames in os.walk(local_dbx_path):
+        for filename in filenames:
+            file_local_path = os.path.join(dirpath, filename)
+            file_relative_path = "/" + os.path.relpath(file_local_path, local_dbx_path)
+            files.append(file_relative_path)
+
+    config: dict = read_config()
+    config['SYNCED_PATHS'] = {key: value for key, value in config['SYNCED_PATHS'].items() if key in files}
+
+    with open(CONFIG_PATH, 'w') as json_file:
+        json.dump(config, json_file, indent=4)
