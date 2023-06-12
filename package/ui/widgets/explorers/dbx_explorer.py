@@ -83,6 +83,7 @@ class DropboxExplorer(Explorer):
             super().create_right_click_menu()
             self.menu.addSeparator()
             self.menu.addAction("Download")
+            self.menu.addAction("Sync")
 
         def eventFilter(self, object, event: QEvent) -> bool:
             return super().eventFilter(object, event)
@@ -93,3 +94,5 @@ class DropboxExplorer(Explorer):
                 download_path = QFileDialog.getSaveFileName(self, "Download Location", str(Path.home())+f"/Downloads/{self.basename}")[0]
                 description = f"Download \"{self.path}\" to \"{download_path}\""
                 self.perform_task.emit('download', {"path":self.path, "local_path":download_path, "description":description})
+            elif action == 'Sync':
+                self.perform_task.emit('sync', {"local_path":self.model.read_config()["DROPBOX_LOCATION"], "dbx_path":self.path, "description": "Syncing to local"})

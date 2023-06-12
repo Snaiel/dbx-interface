@@ -9,6 +9,8 @@ import json
 from dropbox import Dropbox
 from dropbox.exceptions import AuthError
 
+project_root = Path(Path(__file__).parents[2])
+
 def create_dbx() -> Dropbox:
     with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
         json_data = json.load(json_file)
@@ -46,5 +48,10 @@ def create_config(code, app_key, app_secret, dropbox_location):
         'REFRESH_TOKEN': r_data["refresh_token"]
     }
 
-    with open("config.json", "w") as json_file:
+    with open(Path(project_root, "config.json"), "w") as json_file:
         json.dump(config_data, json_file, indent=4)
+
+def read_config() -> dict:
+    with open(Path(project_root, "config.json"), 'r') as json_file:
+        config_data = json.load(json_file)
+        return config_data

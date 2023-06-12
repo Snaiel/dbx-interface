@@ -1,7 +1,8 @@
-from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItemStatus
+from package.model.interface_model import InterfaceModel, ExplorerTask
 from dropbox import Dropbox
-from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo
-import webbrowser, threading, os
+from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo, ListFolderResult
+import webbrowser, threading, os, json, datetime, zipfile
+from pathlib import Path
 
 class DropboxModel(InterfaceModel):
 
@@ -39,7 +40,8 @@ class DropboxModel(InterfaceModel):
             'open': self.open_path,
             'download': self.download,
             'upload_file': self.upload_file,
-            'upload_folder': self.upload_folder
+            'upload_folder': self.upload_folder,
+            'sync': self.sync
         }
 
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
@@ -147,3 +149,70 @@ class DropboxModel(InterfaceModel):
                 self.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_dropbox_path, from_folder=True))
 
         self.refresh()
+
+    @status_update
+    def sync(self, task: ExplorerTask):
+        local_path = task.kwargs['local_path']
+        dbx_path = task.kwargs['dbx_path']
+        if Path(dbx_path).suffix:
+            self.sync_file(local_path, dbx_path)
+        else:
+            self.sync_folder(local_path, dbx_path)
+        self.refresh()
+
+    def sync_file(self, local_path: str, dbx_path: str) -> None:
+        display_path = self.dbx.files_get_metadata(dbx_path).path_display
+        file_local_path = Path(local_path, display_path[1:])
+        if not os.path.exists(file_local_path.parent):
+            os.makedirs(file_local_path.parent)
+            print("Downloading", file_local_path)
+            self.dbx.files_download_to_file(file_local_path, dbx_path)
+        self.update_synced_paths(local_path, [display_path])
+
+    def sync_folder(self, local_path: str, dbx_path: str) -> None:
+        display_path = self.dbx.files_get_metadata(dbx_path).path_display
+        folder_local_path = Path(local_path, display_path[1:])
+
+        if not os.path.exists(folder_local_path.parent):
+            os.makedirs(folder_local_path.parent)
+
+        zip_path = str(folder_local_path) + ".zip"
+        print("Downloading", folder_local_path)
+        self.dbx.files_download_zip_to_file(zip_path, dbx_path)
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(folder_local_path.parent)
+
+        files = []
+
+        for dirpath, dirnames, filenames in os.walk(folder_local_path):
+            for filename in filenames:
+                # construct the full local path
+                file_local_path = os.path.join(dirpath, filename)
+                file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
+                files.append(file_relative_path)
+
+        self.update_synced_paths(local_path, files)
+
+        os.remove(zip_path)
+
+    def update_synced_paths(self, local_path: str, new_paths: list):
+        with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
+            json_data = json.load(json_file)
+
+            new_entries = {}
+
+            for path in new_paths:
+                file_local_path = Path(local_path, path[1:])
+                modified_timestamp = os.path.getmtime(file_local_path)
+                # Convert the timestamp to a datetime object
+                modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
+                modified_dt = modified_dt.replace(microsecond=0)
+                # Format the datetime object as a string
+                modified_formatted = modified_dt.strftime("%Y-%m-%d %H:%M:%S")
+                
+                new_entries[path] = modified_formatted
+
+            json_data['SYNCED_PATHS'].update(new_entries)
+            json_file.seek(0)
+            json.dump(json_data, json_file, indent=4)
+            json_file.truncate()

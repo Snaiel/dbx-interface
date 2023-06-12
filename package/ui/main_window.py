@@ -30,6 +30,7 @@ class MainWindow(QMainWindow):
 
         # Dropbox Interface
         self.dbx_model = DropboxModel(local_root, dbx)
+        self.dbx_model.refresh_signal.connect(self.refresh)
         
         self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_tasks_status)
         self.dbx_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
@@ -39,6 +40,7 @@ class MainWindow(QMainWindow):
 
         # Local Interface
         self.local_model = LocalModel(local_root, synced_paths, self.dbx_model)
+        self.local_model.refresh_signal.connect(self.refresh)
 
         self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_tasks_status, local_root)
         self.local_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
@@ -68,3 +70,8 @@ class MainWindow(QMainWindow):
     @pyqtSlot(QWidget)
     def explorer_focus(self, widget: QWidget):
         self.focused_explorer = widget
+
+    @pyqtSlot()
+    def refresh(self):
+        self.dbx_explorer.refresh_explorer()
+        self.local_explorer.refresh_explorer()

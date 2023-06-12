@@ -19,7 +19,6 @@ class Explorer(QSplitter):
         super().__init__(parent)
         
         self.model = model
-        self.model.refresh_signal.connect(self.refresh_explorer)
 
         self.action_status_popup = action_status_popup
         self.current_directory = current_directory
@@ -40,7 +39,6 @@ class Explorer(QSplitter):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self.left_clicked.emit(self)
 
-    @pyqtSlot()
     def refresh_explorer(self):
         self.item_list.show_list_of_items(self.current_directory)
 

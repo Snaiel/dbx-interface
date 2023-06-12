@@ -1,6 +1,7 @@
 from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal, QObject
 from enum import Enum
+from package.utils.app_utils import read_config
 
 class TaskItemStatus(Enum):
     QUEUED = 1
@@ -26,6 +27,9 @@ class InterfaceModel(QObject):
     def __init__(self, local_root) -> None:
         super().__init__()
         self.local_root = local_root
+
+    def read_config(self) -> dict:
+        return read_config()
 
     def refresh(self):
         self.refresh_signal.emit()
