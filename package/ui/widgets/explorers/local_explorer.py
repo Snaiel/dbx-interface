@@ -57,6 +57,16 @@ class LocalExplorer(Explorer):
 
         def get_explorer_item(self, item_data: list):
             return LocalExplorer.LocalExplorerItem(self, self.explorer, self.model, item_data[0], item_data[1])
+        
+        def create_right_click_menu(self):
+            super().create_right_click_menu()
+            self.menu.addSeparator()
+            self.menu.addAction("Sync")
+
+        def process_action(self, action: str) -> None:
+            super().process_action(action)
+            if action == 'Sync':
+                self.perform_task.emit('sync', {'description': 'Syncing local files'})
 
     class LocalExplorerItem(ExplorerItem):
         def __init__(self, parent, explorer, model,  path, is_file):

@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QKeySequence
 
 class MainWindow(QMainWindow):
-    def __init__(self, dbx, local_root):
+    def __init__(self, dbx, local_root, synced_paths):
         super().__init__()
 
         central_widget = QWidget(self)
@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         self.status_bar.local.tasks_label_clicked.connect(self.local_tasks_status.toggle)
 
         # Dropbox Interface
-        self.dbx_model = DropboxModel(dbx, local_root)
+        self.dbx_model = DropboxModel(local_root, dbx)
         
         self.dbx_explorer = DropboxExplorer(central_widget, self.dbx_model, self.dbx_tasks_status)
         self.dbx_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)
@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         self.dbx_explorer.left_clicked.connect(self.explorer_focus)
 
         # Local Interface
-        self.local_model = LocalModel()
+        self.local_model = LocalModel(local_root, synced_paths, self.dbx_model)
 
         self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_tasks_status, local_root)
         self.local_explorer.selection_num_changed.connect(self.status_bar.update_num_selected)

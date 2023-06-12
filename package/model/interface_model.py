@@ -23,8 +23,9 @@ class InterfaceModel(QObject):
 
     refresh_signal = pyqtSignal()
 
-    def __init__(self) -> None:
+    def __init__(self, local_root) -> None:
         super().__init__()
+        self.local_root = local_root
 
     def refresh(self):
         self.refresh_signal.emit()

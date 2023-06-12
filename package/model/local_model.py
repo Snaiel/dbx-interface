@@ -1,10 +1,14 @@
+import os, platform, subprocess, threading, datetime, json
 from pathlib import Path
-import os, platform, subprocess, threading
-from package.model.interface_model import InterfaceModel, ExplorerTask, TaskItemStatus
+from pprint import pprint
+from package.model.interface_model import InterfaceModel, ExplorerTask
+from package.model.dbx_model import DropboxModel
 
 class LocalModel(InterfaceModel):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, local_root, synced_paths, dbx_model: DropboxModel) -> None:
+        super().__init__(local_root)
+        self.synced_paths = synced_paths
+        self.dbx_model = dbx_model
 
     def get_list_of_paths(self, directory: str) -> list:
         file_list = []
@@ -23,6 +27,7 @@ class LocalModel(InterfaceModel):
             'delete': self.delete,
             'rename': self.rename,
             'open': self.open_path,
+            'sync': self.sync
         }
 
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
@@ -57,3 +62,40 @@ class LocalModel(InterfaceModel):
             subprocess.Popen(["open", path])
         else:
             subprocess.Popen(["xdg-open", path])
+
+    @status_update
+    def sync(self, task: ExplorerTask) -> None:
+        FORMAT = "%Y-%m-%d %H:%M:%S"
+        for dirpath, dirnames, filenames in os.walk(self.local_root):
+            for filename in filenames:
+                # construct the full local path
+                file_local_path = os.path.join(dirpath, filename)
+                file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
+
+                modified_timestamp = os.path.getmtime(file_local_path)
+                # Convert the timestamp to a datetime object
+                modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
+                modified_dt = modified_dt.replace(microsecond=0)
+                # Format the datetime object as a string
+                modified_formatted = modified_dt.strftime(FORMAT)
+
+                if file_relative_path in self.synced_paths:
+                    modified_synced = datetime.datetime.strptime(self.synced_paths[file_relative_path], FORMAT)
+                    if modified_synced < modified_dt:
+                        self.synced_paths[file_relative_path] = modified_formatted
+                        self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                    else:
+                        print("Didn't need to sink: ", file_relative_path, modified_formatted)
+                else:
+                    self.synced_paths[file_relative_path] = modified_formatted
+                    self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+
+        with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
+            json_data = json.load(json_file)
+            json_data['SYNCED_PATHS'] = self.synced_paths
+
+            json_file.seek(0)
+            json.dump(json_data, json_file, indent=4)
+            json_file.truncate()
+
+        self.refresh()

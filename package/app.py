@@ -32,8 +32,8 @@ def run(setup: bool = False) -> int:
             print_error_help()
             return 0
 
-        window = MainWindow(dbx, json_data['DROPBOX_LOCATION'])
-        window.show()
+    window = MainWindow(dbx, json_data['DROPBOX_LOCATION'], json_data['SYNCED_PATHS'])
+    window.show()
 
     return app.exec_()
 

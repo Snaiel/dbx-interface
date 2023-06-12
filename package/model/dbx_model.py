@@ -7,10 +7,9 @@ class DropboxModel(InterfaceModel):
 
     MAX_BUCKET_SIZE = 50 # in megabytes
 
-    def __init__(self, dbx, local_root) -> None:
-        super().__init__()
+    def __init__(self, local_root, dbx) -> None:
+        super().__init__(local_root)
         self.dbx = dbx #type: Dropbox
-        self.local_root = local_root
 
     def get_list_of_paths(self, root: str) -> list:
         file_list = []
@@ -92,7 +91,7 @@ class DropboxModel(InterfaceModel):
 
         file_size = os.path.getsize(path)
 
-        print(f"file size: {file_size / BYTES_TO_MEGABYTES}")
+        print(f"Uploading '{path}' file size: {file_size / BYTES_TO_MEGABYTES}")
 
         if (file_size / BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
             with open(path, 'rb') as file:
