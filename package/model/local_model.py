@@ -1,13 +1,12 @@
 import os, platform, subprocess, threading, datetime, json
 from pathlib import Path
-from pprint import pprint
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from package.model.dbx_model import DropboxModel
+from package.utils import read_config
 
 class LocalModel(InterfaceModel):
-    def __init__(self, local_root, synced_paths, dbx_model: DropboxModel) -> None:
+    def __init__(self, local_root, dbx_model: DropboxModel) -> None:
         super().__init__(local_root)
-        self.synced_paths = synced_paths
         self.dbx_model = dbx_model
 
     def get_list_of_paths(self, directory: str) -> list:
@@ -65,6 +64,8 @@ class LocalModel(InterfaceModel):
 
     @status_update
     def sync(self, task: ExplorerTask) -> None:
+        synced_paths = read_config()["SYNCED_PATHS"]
+
         FORMAT = "%Y-%m-%d %H:%M:%S"
         for dirpath, dirnames, filenames in os.walk(self.local_root):
             for filename in filenames:
@@ -79,10 +80,10 @@ class LocalModel(InterfaceModel):
                 # Format the datetime object as a string
                 modified_formatted = modified_dt.strftime(FORMAT)
 
-                if file_relative_path in self.synced_paths:
-                    modified_synced = datetime.datetime.strptime(self.synced_paths[file_relative_path], FORMAT)
+                if file_relative_path in synced_paths:
+                    modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], FORMAT)
                     if modified_synced < modified_dt:
-                        self.synced_paths[file_relative_path] = modified_formatted
+                        synced_paths[file_relative_path] = modified_formatted
                         self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
                     else:
                         print("Didn't need to sink: ", file_relative_path, modified_formatted)
@@ -92,7 +93,7 @@ class LocalModel(InterfaceModel):
 
         with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
             json_data = json.load(json_file)
-            json_data['SYNCED_PATHS'] = self.synced_paths
+            json_data['SYNCED_PATHS'] = synced_paths
 
             json_file.seek(0)
             json.dump(json_data, json_file, indent=4)

@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QKeySequence
 
 class MainWindow(QMainWindow):
-    def __init__(self, dbx, local_root, synced_paths):
+    def __init__(self, dbx, local_root):
         super().__init__()
 
         central_widget = QWidget(self)
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
         self.dbx_explorer.left_clicked.connect(self.explorer_focus)
 
         # Local Interface
-        self.local_model = LocalModel(local_root, synced_paths, self.dbx_model)
+        self.local_model = LocalModel(local_root, self.dbx_model)
         self.local_model.refresh_signal.connect(self.refresh)
 
         self.local_explorer = LocalExplorer(central_widget, self.local_model, self.local_tasks_status, local_root)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal, QObject
 from enum import Enum
-from package.utils.app_utils import read_config
+from package.utils import read_config
 
 class TaskItemStatus(Enum):
     QUEUED = 1
