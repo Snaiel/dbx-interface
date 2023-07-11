@@ -85,7 +85,9 @@ class DropboxModel(InterfaceModel):
             self.dbx.files_download_zip_to_file(local_path, path)
 
     @status_update
-    def upload_file(self, task: ExplorerTask) -> None:
+    def upload_file(self, task: ExplorerTask) -> bool:
+        success = False
+
         BYTES_TO_MEGABYTES = 1000 ** 2
         MAX_BUCKET_SIZE_BYTES = BYTES_TO_MEGABYTES * self.MAX_BUCKET_SIZE
 
@@ -132,11 +134,15 @@ class DropboxModel(InterfaceModel):
 
                     self.dbx.files_upload_session_finish(None, session_cursor, commit_info)
 
+            success = True
+
             if 'from_folder' not in task.kwargs:
                 self.refresh()
         
         except ApiError as e:
             print(f"Failed to upload '{path}' ({e})")
+
+        return success
 
     @status_update
     def upload_folder(self, task: ExplorerTask):

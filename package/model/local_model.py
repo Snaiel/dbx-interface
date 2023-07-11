@@ -83,13 +83,15 @@ class LocalModel(InterfaceModel):
                 if file_relative_path in synced_paths:
                     modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], FORMAT)
                     if modified_synced < modified_dt:
-                        synced_paths[file_relative_path] = modified_formatted
-                        self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                        success = self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                        if success:
+                            synced_paths[file_relative_path] = modified_formatted
                     else:
                         print("Didn't need to sync: ", file_relative_path, modified_formatted)
                 else:
-                    synced_paths[file_relative_path] = modified_formatted
-                    self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                    success = self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                    if success:
+                        synced_paths[file_relative_path] = modified_formatted
 
         with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
             json_data = json.load(json_file)
