@@ -1,6 +1,7 @@
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from dropbox import Dropbox
 from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo, ListFolderResult
+from dropbox.exceptions import ApiError
 import webbrowser, threading, os, json, datetime, zipfile
 from pathlib import Path
 
@@ -95,43 +96,47 @@ class DropboxModel(InterfaceModel):
 
         print(f"Uploading '{path}' file size: {file_size / BYTES_TO_MEGABYTES}")
 
-        if (file_size / BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
-            with open(path, 'rb') as file:
-                data = file.read()
-                self.dbx.files_upload(data, dbx_path)
-        else:
-            with open(path, 'rb') as file:
-                session_start_result : UploadSessionStartResult = self.dbx.files_upload_session_start(None)
+        try:
+            if (file_size / BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
+                with open(path, 'rb') as file:
+                    data = file.read()
+                    self.dbx.files_upload(data, dbx_path)
+            else:
+                with open(path, 'rb') as file:
+                    session_start_result : UploadSessionStartResult = self.dbx.files_upload_session_start(None)
 
-                bucket_size_bytes = MAX_BUCKET_SIZE_BYTES
-                session_cursor = UploadSessionCursor(session_start_result.session_id, 0)
-                commit_info = CommitInfo(dbx_path)
+                    bucket_size_bytes = MAX_BUCKET_SIZE_BYTES
+                    session_cursor = UploadSessionCursor(session_start_result.session_id, 0)
+                    commit_info = CommitInfo(dbx_path)
 
-                number_of_buckets = int((file_size / MAX_BUCKET_SIZE_BYTES) + 1)
-                last_append_size = file_size % MAX_BUCKET_SIZE_BYTES
-                
-                print(f"bucket size: {bucket_size_bytes}")
-                print(f"last append size: {last_append_size}")
+                    number_of_buckets = int((file_size / MAX_BUCKET_SIZE_BYTES) + 1)
+                    last_append_size = file_size % MAX_BUCKET_SIZE_BYTES
+                    
+                    print(f"bucket size: {bucket_size_bytes}")
+                    print(f"last append size: {last_append_size}")
 
-                for i in range(1, number_of_buckets + 1):
-                    print(f"uploading bucket {i}/{number_of_buckets}")
+                    for i in range(1, number_of_buckets + 1):
+                        print(f"uploading bucket {i}/{number_of_buckets}")
 
-                    bucket = file.read(bucket_size_bytes)
-                    self.dbx.files_upload_session_append_v2(bucket, session_cursor)
+                        bucket = file.read(bucket_size_bytes)
+                        self.dbx.files_upload_session_append_v2(bucket, session_cursor)
 
-                    if i < number_of_buckets:
-                        session_cursor.offset += bucket_size_bytes
-                    else:
-                        session_cursor.offset += last_append_size
+                        if i < number_of_buckets:
+                            session_cursor.offset += bucket_size_bytes
+                        else:
+                            session_cursor.offset += last_append_size
 
-                    print(session_cursor.offset)
+                        print(session_cursor.offset)
 
-                print("finish up")
+                    print("finish up")
 
-                self.dbx.files_upload_session_finish(None, session_cursor, commit_info)
+                    self.dbx.files_upload_session_finish(None, session_cursor, commit_info)
 
-        if 'from_folder' not in task.kwargs:
-            self.refresh()
+            if 'from_folder' not in task.kwargs:
+                self.refresh()
+        
+        except ApiError as e:
+            print(f"Failed to upload '{path}' ({e})")
 
     @status_update
     def upload_folder(self, task: ExplorerTask):
