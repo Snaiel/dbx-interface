@@ -64,7 +64,7 @@ class LocalModel(InterfaceModel):
 
     @status_update
     def sync(self, task: ExplorerTask) -> None:
-        synced_paths = read_config()["SYNCED_PATHS"]
+        synced_paths:dict = read_config()["SYNCED_PATHS"]
 
         FORMAT = "%Y-%m-%d %H:%M:%S"
         for dirpath, dirnames, filenames in os.walk(self.local_root):
@@ -83,16 +83,27 @@ class LocalModel(InterfaceModel):
                 if file_relative_path in synced_paths:
                     modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], FORMAT)
                     if modified_synced < modified_dt:
-                        success = self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                        success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
                         if success:
                             synced_paths[file_relative_path] = modified_formatted
+                            self._write_to_synced_paths(synced_paths)
                     else:
                         print("Didn't need to sync: ", file_relative_path, modified_formatted)
                 else:
-                    success = self.dbx_model.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_relative_path, from_folder=True))
+                    success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
                     if success:
                         synced_paths[file_relative_path] = modified_formatted
+                        self._write_to_synced_paths(synced_paths)
 
+
+        # sort paths
+        synced_paths = {key:synced_paths[key] for key in sorted(synced_paths.keys())}
+        self._write_to_synced_paths(synced_paths)
+
+        self.refresh()
+
+    @staticmethod
+    def _write_to_synced_paths(synced_paths: dict):
         with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
             json_data = json.load(json_file)
             json_data['SYNCED_PATHS'] = synced_paths
@@ -100,5 +111,3 @@ class LocalModel(InterfaceModel):
             json_file.seek(0)
             json.dump(json_data, json_file, indent=4)
             json_file.truncate()
-
-        self.refresh()

@@ -1,6 +1,6 @@
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from dropbox import Dropbox
-from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo, ListFolderResult
+from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo, ListFolderResult, WriteMode
 from dropbox.exceptions import ApiError
 import webbrowser, threading, os, json, datetime, zipfile
 from pathlib import Path
@@ -86,25 +86,27 @@ class DropboxModel(InterfaceModel):
 
     @status_update
     def upload_file(self, task: ExplorerTask) -> bool:
+        success = self.api_upload_file(task.kwargs["path"], task.kwargs["dbx_path"])
+        if success:
+            self.refresh()
+
+    def api_upload_file(self, local_path: str, dbx_path: str) -> bool:
         success = False
 
         BYTES_TO_MEGABYTES = 1000 ** 2
         MAX_BUCKET_SIZE_BYTES = BYTES_TO_MEGABYTES * self.MAX_BUCKET_SIZE
 
-        path = task.kwargs['path']
-        dbx_path = task.kwargs['dbx_path']
+        file_size = os.path.getsize(local_path)
 
-        file_size = os.path.getsize(path)
-
-        print(f"Uploading '{path}' file size: {file_size / BYTES_TO_MEGABYTES}")
+        print(f"Uploading '{local_path}' file size: {file_size / BYTES_TO_MEGABYTES}")
 
         try:
             if (file_size / BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
-                with open(path, 'rb') as file:
+                with open(local_path, 'rb') as file:
                     data = file.read()
-                    self.dbx.files_upload(data, dbx_path)
+                    self.dbx.files_upload(data, dbx_path, WriteMode.overwrite)
             else:
-                with open(path, 'rb') as file:
+                with open(local_path, 'rb') as file:
                     session_start_result : UploadSessionStartResult = self.dbx.files_upload_session_start(None)
 
                     bucket_size_bytes = MAX_BUCKET_SIZE_BYTES
@@ -135,12 +137,9 @@ class DropboxModel(InterfaceModel):
                     self.dbx.files_upload_session_finish(None, session_cursor, commit_info)
 
             success = True
-
-            if 'from_folder' not in task.kwargs:
-                self.refresh()
         
         except ApiError as e:
-            print(f"Failed to upload '{path}' ({e})")
+            print(f"Failed to upload '{local_path}' ({e})")
 
         return success
 
@@ -157,7 +156,7 @@ class DropboxModel(InterfaceModel):
                 # construct the full Dropbox path
                 file_relative_path = os.path.relpath(file_local_path, path)
                 file_dropbox_path = os.path.join(dbx_path, file_relative_path)
-                self.upload_file(ExplorerTask('upload_file', path=file_local_path, dbx_path=file_dropbox_path, from_folder=True))
+                self.api_upload_file(file_local_path, file_dropbox_path)
 
         self.refresh()
 
