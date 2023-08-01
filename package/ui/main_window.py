@@ -11,6 +11,7 @@ from PyQt5.QtGui import QKeySequence
 class MainWindow(QMainWindow):
     def __init__(self, dbx, local_root):
         super().__init__()
+        self.setWindowTitle("dbx-interface")
 
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
