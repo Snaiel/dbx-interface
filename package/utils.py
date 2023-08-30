@@ -11,6 +11,8 @@ from dropbox.exceptions import AuthError
 PROJECT_ROOT = Path(__file__).parents[1]
 CONFIG_PATH = Path(PROJECT_ROOT, 'config.json')
 
+TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 def create_dbx() -> Dropbox:
     with open(CONFIG_PATH, 'r+') as json_file:
         json_data = json.load(json_file)
@@ -46,7 +48,8 @@ def create_config(code, app_key, app_secret, dropbox_location) -> None:
         'APP_SECRET': app_secret,
         'ACCESS_TOKEN': r_data["access_token"],
         'REFRESH_TOKEN': r_data["refresh_token"],
-        'SYNCED_PATHS': {}
+        'TIME_LAST_SYNCED_FROM_CLOUD': {},
+        'TIME_LAST_SYNCED_FROM_LOCAL': {}
     }
 
     with open(CONFIG_PATH, "w") as json_file:
@@ -58,7 +61,7 @@ def read_config() -> dict:
         return config_data
     
 def clean_synced_paths(local_dbx_path: str) -> None:
-    print("Cleaning SYNCED_PATHS")
+    print("Cleaning TIME_LAST_SYNCED_FROM_LOCAL")
     files = []
 
     for dirpath, dirnames, filenames in os.walk(local_dbx_path):
@@ -68,7 +71,7 @@ def clean_synced_paths(local_dbx_path: str) -> None:
             files.append(file_relative_path)
 
     config: dict = read_config()
-    config['SYNCED_PATHS'] = {key: value for key, value in config['SYNCED_PATHS'].items() if key in files}
+    config['TIME_LAST_SYNCED_FROM_LOCAL'] = {key: value for key, value in config['TIME_LAST_SYNCED_FROM_LOCAL'].items() if key in files}
 
     with open(CONFIG_PATH, 'w') as json_file:
         json.dump(config, json_file, indent=4)

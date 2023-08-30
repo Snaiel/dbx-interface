@@ -4,14 +4,18 @@ from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionC
 from dropbox.exceptions import ApiError
 import webbrowser, threading, os, json, datetime, zipfile
 from pathlib import Path
+from package.utils import read_config, TIMESTAMP_FORMAT
+
 
 class DropboxModel(InterfaceModel):
 
     MAX_BUCKET_SIZE = 50 # in megabytes
 
+
     def __init__(self, local_root, dbx) -> None:
         super().__init__(local_root)
         self.dbx = dbx #type: Dropbox
+
 
     def get_list_of_paths(self, root: str) -> list:
         file_list = []
@@ -33,6 +37,7 @@ class DropboxModel(InterfaceModel):
 
         return file_list
 
+
     def perform_task(self, task: ExplorerTask):
         ACTION_FUNC = {
             'create_folder': self.create_folder,
@@ -48,18 +53,22 @@ class DropboxModel(InterfaceModel):
         thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
         thread.start()
 
+
     def status_update(func):
         return InterfaceModel.status_update(func)
+
 
     @status_update
     def create_folder(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         self.dbx.files_create_folder(path, True)
 
+
     @status_update
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         self.dbx.files_delete(path)
+
 
     @status_update
     def move(self, task: ExplorerTask) -> None:
@@ -67,10 +76,12 @@ class DropboxModel(InterfaceModel):
         new_path = task.kwargs['new_path']
         self.dbx.files_move(path, new_path)
 
+
     @status_update
     def open_path(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         webbrowser.open(f"https://www.dropbox.com/home{path}")
+
 
     @status_update
     def download(self, task: ExplorerTask) -> None:
@@ -84,11 +95,13 @@ class DropboxModel(InterfaceModel):
             local_path += ".zip"
             self.dbx.files_download_zip_to_file(local_path, path)
 
+
     @status_update
     def upload_file(self, task: ExplorerTask) -> bool:
         success = self.api_upload_file(task.kwargs["path"], task.kwargs["dbx_path"])
         if success:
             self.refresh()
+
 
     def api_upload_file(self, local_path: str, dbx_path: str) -> bool:
         success = False
@@ -143,6 +156,7 @@ class DropboxModel(InterfaceModel):
 
         return success
 
+
     @status_update
     def upload_folder(self, task: ExplorerTask):
         path = task.kwargs['path']
@@ -160,26 +174,67 @@ class DropboxModel(InterfaceModel):
 
         self.refresh()
 
+
     @status_update
     def sync(self, task: ExplorerTask):
         local_path = task.kwargs['local_path']
         dbx_path = task.kwargs['dbx_path']
+
+        synced_paths: dict = read_config()["TIME_LAST_SYNCED_FROM_CLOUD"]
+
         if Path(dbx_path).suffix:
-            self.sync_file(local_path, dbx_path)
+            self.sync_file(local_path, dbx_path, synced_paths)
         else:
-            self.sync_folder(local_path, dbx_path)
+            self.sync_folder(local_path, dbx_path, synced_paths)
         self.refresh()
 
-    def sync_file(self, local_path: str, dbx_path: str) -> None:
-        display_path = self.dbx.files_get_metadata(dbx_path).path_display
+
+    def sync_file(self, local_path: str, dbx_path: str, synced_paths: dict) -> None:
+        """
+        local_path: the user's local dropbox location
+        dbx_path: the path to the file on the user's dropbox cloud
+        """
+
+        dropbox_file_metadata: FileMetadata = self.dbx.files_get_metadata(dbx_path)
+
+        display_path = dropbox_file_metadata.path_display
+
+        last_dropbox_modification_dt = dropbox_file_metadata.server_modified
+
         file_local_path = Path(local_path, display_path[1:])
-        if not os.path.exists(file_local_path.parent):
-            os.makedirs(file_local_path.parent)
+
+        download = False
+        if display_path in synced_paths:
+            last_synced_timestamp = os.path.getmtime(file_local_path)
+            # Convert the timestamp to a datetime object
+            last_synced_dt = datetime.datetime.fromtimestamp(last_synced_timestamp)
+            last_synced_dt = last_synced_dt.replace(microsecond=0)
+
+            if last_synced_dt < last_dropbox_modification_dt:
+                download = True
+            else:
+                print("Didn't need to sync/download " + display_path)
+        else:
+            download = True
+
+        if download:
+            if not os.path.exists(file_local_path.parent):
+                os.makedirs(file_local_path.parent)
+
             print("Downloading", file_local_path)
             self.dbx.files_download_to_file(file_local_path, dbx_path)
-        self.update_synced_paths(local_path, [display_path])
 
-    def sync_folder(self, local_path: str, dbx_path: str) -> None:
+            self.update_last_time_synced(local_path, [display_path], False)
+            # because we essentially 'modified' the local copy
+            self.update_last_time_synced(local_path, [display_path])
+
+
+    def sync_folder(self, local_path: str, dbx_path: str, synced_paths: dict) -> None:
+        """
+        local_path: the user's local dropbox location
+        dbx_path: the path to the folder on the user's dropbox cloud
+        """
+
         display_path = self.dbx.files_get_metadata(dbx_path).path_display
         folder_local_path = Path(local_path, display_path[1:])
 
@@ -201,11 +256,24 @@ class DropboxModel(InterfaceModel):
                 file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
                 files.append(file_relative_path)
 
-        self.update_synced_paths(local_path, files)
+        self.update_last_time_synced(local_path, files)
 
         os.remove(zip_path)
 
-    def update_synced_paths(self, local_path: str, new_paths: list):
+    def update_last_time_synced(self, local_path: str, new_paths: list[str], local: bool = True):
+        '''
+        puts all the paths in new_paths in TIME_LAST_SYNCED_FROM_LOCAL with their
+        modified time.
+
+        local_path: the path to the user's local dropbox folder
+        new_paths: the list of paths that correspond to the ones in the cloud
+        '''
+
+        if local:
+            suffix = "LOCAL"
+        else:
+            suffix = "CLOUD"
+
         with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
             json_data = json.load(json_file)
 
@@ -213,16 +281,16 @@ class DropboxModel(InterfaceModel):
 
             for path in new_paths:
                 file_local_path = Path(local_path, path[1:])
-                modified_timestamp = os.path.getmtime(file_local_path)
+                timestamp = os.path.getmtime(file_local_path)
                 # Convert the timestamp to a datetime object
-                modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
-                modified_dt = modified_dt.replace(microsecond=0)
+                dt = datetime.datetime.fromtimestamp(timestamp)
+                dt = dt.replace(microsecond=0)
                 # Format the datetime object as a string
-                modified_formatted = modified_dt.strftime("%Y-%m-%d %H:%M:%S")
+                formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
                 
-                new_entries[path] = modified_formatted
+                new_entries[path] = formatted
 
-            json_data['SYNCED_PATHS'].update(new_entries)
+            json_data['TIME_LAST_SYNCED_FROM_' + suffix].update(new_entries)
             json_file.seek(0)
             json.dump(json_data, json_file, indent=4)
             json_file.truncate()

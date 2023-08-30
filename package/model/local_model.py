@@ -2,7 +2,7 @@ import os, platform, subprocess, threading, datetime, json
 from pathlib import Path
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from package.model.dbx_model import DropboxModel
-from package.utils import read_config
+from package.utils import read_config, TIMESTAMP_FORMAT
 
 class LocalModel(InterfaceModel):
     def __init__(self, local_root, dbx_model: DropboxModel) -> None:
@@ -64,9 +64,8 @@ class LocalModel(InterfaceModel):
 
     @status_update
     def sync(self, task: ExplorerTask) -> None:
-        synced_paths:dict = read_config()["SYNCED_PATHS"]
+        synced_paths:dict = read_config()["TIME_LAST_SYNCED_FROM_LOCAL"]
 
-        FORMAT = "%Y-%m-%d %H:%M:%S"
         for dirpath, dirnames, filenames in os.walk(self.local_root):
             for filename in filenames:
                 # construct the full local path
@@ -78,10 +77,10 @@ class LocalModel(InterfaceModel):
                 modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
                 modified_dt = modified_dt.replace(microsecond=0)
                 # Format the datetime object as a string
-                modified_formatted = modified_dt.strftime(FORMAT)
+                modified_formatted = modified_dt.strftime(TIMESTAMP_FORMAT)
 
                 if file_relative_path in synced_paths:
-                    modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], FORMAT)
+                    modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], TIMESTAMP_FORMAT)
                     if modified_synced < modified_dt:
                         success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
                         if success:
@@ -106,7 +105,7 @@ class LocalModel(InterfaceModel):
     def _write_to_synced_paths(synced_paths: dict):
         with open(Path(Path(__file__).parents[2], 'config.json'), 'r+') as json_file:
             json_data = json.load(json_file)
-            json_data['SYNCED_PATHS'] = synced_paths
+            json_data['TIME_LAST_SYNCED_FROM_LOCAL'] = synced_paths
 
             json_file.seek(0)
             json.dump(json_data, json_file, indent=4)
