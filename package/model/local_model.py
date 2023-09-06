@@ -1,5 +1,6 @@
-import os, platform, subprocess, threading, datetime, json
+import os, platform, subprocess, threading, datetime, json, pathspec
 from pathlib import Path
+from typing import Callable
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from package.model.dbx_model import DropboxModel
 from package.utils import read_config, TIMESTAMP_FORMAT
@@ -62,38 +63,73 @@ class LocalModel(InterfaceModel):
         else:
             subprocess.Popen(["xdg-open", path])
 
+    @staticmethod
+    def _get_applicable_gitignores(path: str, gitignore_stack: list[tuple[str, pathspec.PathSpec]]) -> list:
+        applicable: Callable[[str], bool] = []
+
+        for gitignore_path, gitignore_match in gitignore_stack:
+            if path.startswith(os.path.dirname(gitignore_path)):
+                applicable.append(gitignore_match)
+
+        return applicable
+
     @status_update
     def sync(self, task: ExplorerTask) -> None:
         synced_paths:dict = read_config()["TIME_LAST_SYNCED_FROM_LOCAL"]
 
+        gitignore_stack: list[tuple[str, pathspec.PathSpec]] = []
+        applicable_gitignores: list[pathspec.PathSpec] = []
+
         for dirpath, dirnames, filenames in os.walk(self.local_root):
+            # consider gitignore files
+            if '.gitignore' in filenames:
+                gitignore_path = os.path.join(dirpath, '.gitignore')
+                with open(gitignore_path) as file:
+                    spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, file.readlines())
+                    gitignore_stack.append((gitignore_path, spec))
+
+            applicable_gitignores = self._get_applicable_gitignores(dirpath, gitignore_stack)
+
             for filename in filenames:
                 # construct the full local path
                 file_local_path = os.path.join(dirpath, filename)
                 file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
 
-                modified_timestamp = os.path.getmtime(file_local_path)
-                # Convert the timestamp to a datetime object
-                modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
-                modified_dt = modified_dt.replace(microsecond=0)
-                # Format the datetime object as a string
-                modified_formatted = modified_dt.strftime(TIMESTAMP_FORMAT)
+                sync_file = True
 
-                if file_relative_path in synced_paths:
-                    modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], TIMESTAMP_FORMAT)
-                    if modified_synced < modified_dt:
+                # Check if file is in a gitignore
+                for gitignore_match in applicable_gitignores:
+                    if gitignore_match.match_file(file_local_path):
+                        print("Ignoring file in .gitignore: ", file_relative_path)
+                        sync_file = False
+                        break
+
+                if sync_file:
+                    modified_timestamp = os.path.getmtime(file_local_path)
+                    # Convert the timestamp to a datetime object
+                    modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
+                    modified_dt = modified_dt.replace(microsecond=0)
+                    # Format the datetime object as a string
+                    modified_formatted = modified_dt.strftime(TIMESTAMP_FORMAT)
+
+                    if file_relative_path in synced_paths:
+                        modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], TIMESTAMP_FORMAT)
+                        if modified_synced < modified_dt:
+                            success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
+                            if success:
+                                synced_paths[file_relative_path] = modified_formatted
+                                self._write_to_synced_paths(synced_paths)
+                        else:
+                            print("Didn't need to sync: ", file_relative_path, modified_formatted)
+                    else:
                         success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
                         if success:
                             synced_paths[file_relative_path] = modified_formatted
                             self._write_to_synced_paths(synced_paths)
-                    else:
-                        print("Didn't need to sync: ", file_relative_path, modified_formatted)
-                else:
-                    success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
-                    if success:
-                        synced_paths[file_relative_path] = modified_formatted
-                        self._write_to_synced_paths(synced_paths)
 
+            # Remove the top .gitignore file from the stack when leaving the directory
+            if gitignore_stack and not dirpath.startswith(os.path.dirname(gitignore_stack[-1][0])):
+                gitignore_stack.pop()
 
         # sort paths
         synced_paths = {key:synced_paths[key] for key in sorted(synced_paths.keys())}
