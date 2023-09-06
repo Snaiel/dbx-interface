@@ -1,9 +1,11 @@
-import os, platform, subprocess, threading, datetime, json, pathspec
+import os, platform, subprocess, threading, datetime, json, pathspec, colorama
 from pathlib import Path
 from typing import Callable
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from package.model.dbx_model import DropboxModel
 from package.utils import read_config, TIMESTAMP_FORMAT
+
+colorama.init(autoreset=True)  # Automatically reset colors after each print
 
 class LocalModel(InterfaceModel):
     def __init__(self, local_root, dbx_model: DropboxModel) -> None:
@@ -100,7 +102,7 @@ class LocalModel(InterfaceModel):
                 # Check if file is in a gitignore
                 for gitignore_match in applicable_gitignores:
                     if gitignore_match.match_file(file_local_path):
-                        print("Ignoring file in .gitignore: ", file_relative_path)
+                        print(colorama.Fore.CYAN + "Ignoring file in .gitignore: ", file_relative_path)
                         sync_file = False
                         break
 
@@ -120,7 +122,7 @@ class LocalModel(InterfaceModel):
                                 synced_paths[file_relative_path] = modified_formatted
                                 self._write_to_synced_paths(synced_paths)
                         else:
-                            print("Didn't need to sync: ", file_relative_path, modified_formatted)
+                            print(colorama.Fore.GREEN + "Didn't need to sync: ", file_relative_path, modified_formatted)
                     else:
                         success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
                         if success:

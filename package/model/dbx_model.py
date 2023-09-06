@@ -1,11 +1,12 @@
+import webbrowser, threading, os, json, datetime, zipfile, colorama
 from package.model.interface_model import InterfaceModel, ExplorerTask
 from dropbox import Dropbox
 from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo, ListFolderResult, WriteMode
 from dropbox.exceptions import ApiError
-import webbrowser, threading, os, json, datetime, zipfile
 from pathlib import Path
 from package.utils import read_config, TIMESTAMP_FORMAT
 
+colorama.init(autoreset=True)
 
 class DropboxModel(InterfaceModel):
 
@@ -111,7 +112,7 @@ class DropboxModel(InterfaceModel):
 
         file_size = os.path.getsize(local_path)
 
-        print(f"Uploading '{local_path}' file size: {file_size / BYTES_TO_MEGABYTES}")
+        print(colorama.Fore.BLUE + f"Uploading '{local_path}' file size: {file_size / BYTES_TO_MEGABYTES}")
 
         try:
             if (file_size / BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
@@ -152,7 +153,7 @@ class DropboxModel(InterfaceModel):
             success = True
         
         except ApiError as e:
-            print(f"Failed to upload '{local_path}' ({e})")
+            print(colorama.Fore.RED + f"Failed to upload '{local_path}' ({e})")
 
         return success
 
