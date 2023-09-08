@@ -26,7 +26,8 @@ class LocalModel(InterfaceModel):
 
         ACTION_FUNC = {
             'create_folder': self.create_folder,
-            'delete': self.delete,
+            'delete_local': self.delete_local,
+            'delete_local_and_cloud': self.delete_local_and_cloud,
             'rename': self.rename,
             'open': self.open_path,
             'sync': self.sync
@@ -42,14 +43,26 @@ class LocalModel(InterfaceModel):
     def create_folder(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         os.mkdir(path)
+        self.refresh()
 
-    @status_update
-    def delete(self, task: ExplorerTask) -> None:
-        path = task.kwargs['path']
+    def _delete_local(self, path):
         if os.path.isfile(path):
             os.remove(path)
         else:
             os.rmdir(path)
+
+    @status_update
+    def delete_local(self, task: ExplorerTask) -> None:
+        path = task.kwargs['path']
+        self._delete_local(path)
+        self.refresh()
+
+    @status_update
+    def delete_local_and_cloud(self, task: ExplorerTask) -> None:
+        path: str = task.kwargs['path']
+        self._delete_local(path)
+        self.dbx_model.api_delete(path.removeprefix(self.local_root))
+        self.refresh()
 
     @status_update
     def rename(self, task: ExplorerTask) -> None:

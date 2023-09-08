@@ -63,13 +63,15 @@ class DropboxModel(InterfaceModel):
     def create_folder(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         self.dbx.files_create_folder(path, True)
+        self.refresh()
 
+    def api_delete(self, path: str) -> None:
+        self.dbx.files_delete(path)
 
     @status_update
     def delete(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
-        self.dbx.files_delete(path)
-
+        self.api_delete(path)
 
     @status_update
     def move(self, task: ExplorerTask) -> None:

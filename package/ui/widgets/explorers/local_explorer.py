@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QMenu,QMessageBox
 from package.ui.widgets.explorers.base.explorer import Explorer
 from package.ui.widgets.explorers.base.directory_panel import DirectoryPanel
 from package.ui.widgets.explorers.base.item_list import ItemList
@@ -71,3 +71,38 @@ class LocalExplorer(Explorer):
     class LocalExplorerItem(ExplorerItem):
         def __init__(self, parent, explorer, model,  path, is_file):
             super().__init__(parent, explorer, model,  path, is_file)
+
+        def create_right_click_menu(self):
+            self.menu = QMenu(self)
+            self.menu.addAction("Rename")
+            self.menu.addSection("Delete")
+            self.menu.addAction("Local Only")
+            self.menu.addAction("Local and Cloud")
+            self.menu.addSeparator()
+            self.menu.addAction("Open")
+            self.menu.addAction("Open Containing Folder")
+
+        def process_action(self, action: str) -> None:
+            super().process_action(action)
+            if action == "Local Only":
+                msg = QMessageBox(self)
+                msg.setText(f"Are you sure you want to delete \"{self.basename}\" locally?")
+                msg.setInformativeText("This cannot be undone.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes)
+                msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
+                answer = msg.exec()
+                if answer == QMessageBox.StandardButton.Yes:
+                    description = f"Delete \"{self.path}\""
+                    self.perform_task.emit('delete_local', {"path":self.path, "description":description})
+                    self.deleteLater()
+            elif action == "Local and Cloud":
+                msg = QMessageBox(self)
+                msg.setText(f"Are you sure you want to delete \"{self.basename}\" both locally and in the cloud?")
+                msg.setInformativeText("This cannot be undone.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes)
+                msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
+                answer = msg.exec()
+                if answer == QMessageBox.StandardButton.Yes:
+                    description = f"Delete \"{self.path}\""
+                    self.perform_task.emit('delete_local_and_cloud', {"path":self.path, "description":description})
+                    self.deleteLater()
