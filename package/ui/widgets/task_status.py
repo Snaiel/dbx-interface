@@ -148,7 +148,7 @@ class TaskStatusPopup(QWidget):
             self.item_layout.addWidget(self.icon)
             self.item_layout.addWidget(self.label)
 
-        @pyqtSlot()
+        @pyqtSlot(ExplorerTask)
         def receive_task_update(self, task: ExplorerTask):
             print(vars(task))
             self.icon.load(self.TASK_STATUS_TO_ICON_PATH[task.status])

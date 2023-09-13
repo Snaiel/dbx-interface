@@ -48,4 +48,5 @@ class Explorer(QSplitter):
         model_task = ExplorerTask(action, **kwargs)
         model_task.task_update.connect(lambda : ui_task.receive_task_update(model_task))
         model_task.task_update.connect(lambda : self.task_status_changed.emit(self, model_task.kwargs['description']))
-        self.model.perform_task(model_task)
+        thread = self.model.perform_task(model_task)
+        thread.start()

@@ -1,10 +1,18 @@
-import os, platform, subprocess, threading, datetime, json, pathspec, colorama
+import datetime
+import json
+import os
+import platform
+import subprocess
 from pathlib import Path
 from typing import Callable
-from package.model.interface_model import InterfaceModel, ExplorerTask
+
+import colorama
+import pathspec
+
 from package.model.dbx_model import DropboxModel
-from package.utils import read_config, TIMESTAMP_FORMAT
-from pprint import pprint
+from package.model.interface_model import (ExplorerTask, InterfaceModel,
+                                           MyThread)
+from package.utils import TIMESTAMP_FORMAT, read_config
 
 colorama.init(autoreset=True)  # Automatically reset colors after each print
 
@@ -34,8 +42,8 @@ class LocalModel(InterfaceModel):
             'sync': self.sync
         }
 
-        thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
-        thread.start()
+        thread = MyThread(self, ACTION_FUNC[task.action], [task])
+        return thread
 
     def status_update(func):
         return InterfaceModel.status_update(func)

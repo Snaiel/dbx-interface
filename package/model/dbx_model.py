@@ -1,10 +1,19 @@
-import webbrowser, threading, os, json, datetime, zipfile, colorama
-from package.model.interface_model import InterfaceModel, ExplorerTask
-from dropbox import Dropbox
-from dropbox.files import FileMetadata, UploadSessionStartResult, UploadSessionCursor, CommitInfo, ListFolderResult, WriteMode
-from dropbox.exceptions import ApiError
+import datetime
+import json
+import os
+import webbrowser
+import zipfile
 from pathlib import Path
-from package.utils import read_config, TIMESTAMP_FORMAT
+
+import colorama
+from dropbox import Dropbox
+from dropbox.exceptions import ApiError
+from dropbox.files import (CommitInfo, FileMetadata, UploadSessionCursor,
+                           UploadSessionStartResult, WriteMode)
+
+from package.model.interface_model import (ExplorerTask, InterfaceModel,
+                                           MyThread)
+from package.utils import read_config
 
 colorama.init(autoreset=True)
 
@@ -39,7 +48,7 @@ class DropboxModel(InterfaceModel):
         return file_list
 
 
-    def perform_task(self, task: ExplorerTask):
+    def perform_task(self, task: ExplorerTask) -> MyThread:
         ACTION_FUNC = {
             'create_folder': self.create_folder,
             'delete': self.delete,
@@ -51,8 +60,8 @@ class DropboxModel(InterfaceModel):
             'sync': self.sync
         }
 
-        thread = threading.Thread(target=ACTION_FUNC[task.action], args=[task], daemon=True)
-        thread.start()
+        thread = MyThread(self, ACTION_FUNC[task.action], [task])
+        return thread
 
 
     def status_update(func):
@@ -90,6 +99,8 @@ class DropboxModel(InterfaceModel):
     def download(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         local_path = task.kwargs['local_path']
+
+        print(colorama.Fore.MAGENTA + f"Downloading {path}")
 
         # Checks if the path is a file or folder
         if isinstance(self.dbx.files_get_metadata(path), FileMetadata):
@@ -146,7 +157,7 @@ class DropboxModel(InterfaceModel):
                         else:
                             session_cursor.offset += last_append_size
 
-                        print(session_cursor.offset)
+                        # print(session_cursor.offset)
 
                     print("finish up")
 
@@ -216,7 +227,7 @@ class DropboxModel(InterfaceModel):
             if last_synced_dt < last_dropbox_modification_dt:
                 download = True
             else:
-                print("Didn't need to sync/download " + display_path)
+                print(colorama.Fore.GREEN + "Didn't need to sync/download " + display_path)
         else:
             download = True
 
@@ -224,7 +235,7 @@ class DropboxModel(InterfaceModel):
             if not os.path.exists(file_local_path.parent):
                 os.makedirs(file_local_path.parent)
 
-            print("Downloading", file_local_path)
+            print(colorama.Fore.MAGENTA + f"Downloading {dbx_path}")
             self.dbx.files_download_to_file(file_local_path, dbx_path)
 
             self.update_last_time_synced(local_path, [display_path], False)
@@ -245,7 +256,7 @@ class DropboxModel(InterfaceModel):
             os.makedirs(folder_local_path.parent)
 
         zip_path = str(folder_local_path) + ".zip"
-        print("Downloading", folder_local_path)
+        print(colorama.Fore.MAGENTA + f"Downloading {dbx_path}")
         self.dbx.files_download_zip_to_file(zip_path, dbx_path)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(folder_local_path.parent)

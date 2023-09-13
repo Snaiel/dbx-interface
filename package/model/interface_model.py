@@ -1,12 +1,26 @@
 from __future__ import annotations
-from PyQt5.QtCore import pyqtSignal, QObject
+
 from enum import Enum
+
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
+
 from package.utils import read_config
+
 
 class TaskItemStatus(Enum):
     QUEUED = 1
     RUNNING = 2
     DONE = 3
+
+class MyThread(QThread):
+    def __init__(self, parent, target=None, args=[]):
+        super().__init__(parent)
+        self.target = target
+        self.args = args
+    
+    def run(self):
+        if self.target:
+            self.target(*self.args)
 
 class ExplorerTask(QObject):
     task_update = pyqtSignal()
@@ -39,7 +53,7 @@ class InterfaceModel(QObject):
         retrieves a list of files and folders given a directory path
         '''
 
-    def perform_task(self, task: ExplorerTask):
+    def perform_task(self, task: ExplorerTask) -> MyThread:
         '''
         performs a given action using multithreading
         '''
