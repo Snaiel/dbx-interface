@@ -2,6 +2,7 @@ from package.ui.widgets.explorers.dbx_explorer import DropboxExplorer
 from package.ui.widgets.explorers.local_explorer import LocalExplorer
 from package.model.dbx_model import DropboxModel
 from package.model.local_model import LocalModel
+from package.model.interface_model import ExplorerTask, TaskItemStatus
 from PyQt5.QtWidgets import QWidget, QLabel, QStatusBar, QHBoxLayout, QSizePolicy
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QEvent, Qt
 from PyQt5.QtGui import QResizeEvent
@@ -23,10 +24,13 @@ class StatusBar(QStatusBar):
         statusbar_section = self._get_statusbar_section(explorer) # type: StatusBar.StatusBarSection
         statusbar_section.set_num_selected(num)
 
-    @pyqtSlot(QObject, str)
-    def update_task_status(self, model: QObject, message: str):
+    @pyqtSlot(QObject, ExplorerTask)
+    def update_task_status(self, model: QObject, task: ExplorerTask):
         statusbar_section = self._get_statusbar_section(model) # type: StatusBar.StatusBarSection
-        statusbar_section.set_task_status(message)
+        if task.status == TaskItemStatus.DONE:
+            statusbar_section.set_task_status("no tasks to perform")
+        else:
+            statusbar_section.set_task_status(task.kwargs["description"])
 
     def _get_statusbar_section(self, origin: QObject):
         statusbar_section = None
