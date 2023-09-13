@@ -1,14 +1,17 @@
 import datetime
 import json
 import os
+import threading
 import webbrowser
 import zipfile
 from pathlib import Path
+from pprint import pprint
+from time import sleep
 
 import colorama
 from dropbox import Dropbox
 from dropbox.exceptions import ApiError
-from dropbox.files import (CommitInfo, FileMetadata, UploadSessionCursor,
+from dropbox.files import (CommitInfo, FileMetadata, FolderMetadata, UploadSessionCursor,
                            UploadSessionStartResult, WriteMode)
 
 from package.model.interface_model import (ExplorerTask, InterfaceModel,
@@ -20,7 +23,8 @@ colorama.init(autoreset=True)
 class DropboxModel(InterfaceModel):
 
     MAX_BUCKET_SIZE = 50 # in megabytes
-
+    BYTES_TO_MEGABYTES = 1000 ** 2
+    MAX_BUCKET_SIZE_BYTES = BYTES_TO_MEGABYTES * MAX_BUCKET_SIZE
 
     def __init__(self, local_root, dbx) -> None:
         super().__init__(local_root)
@@ -95,19 +99,78 @@ class DropboxModel(InterfaceModel):
         webbrowser.open(f"https://www.dropbox.com/home{path}")
 
 
+    def _get_dbx_folder_size(self, path: str) -> int:
+        """
+        recursive function to retrieve folder size in bytes
+        """
+        size = 0
+        folders = []
+        files = []
+
+        for entry in self.dbx.files_list_folder(path).entries:
+            if type(entry) == FolderMetadata:
+                folders.append(entry)
+            elif type(entry) == FileMetadata:
+                files.append(entry)
+
+        for subfolder in folders:
+            subfolder_path = path + "/" + subfolder.name
+            size += self._get_dbx_folder_size(subfolder_path)
+
+        for file in files:
+            size += file.size
+
+        return size
+    
+    def _download_progress(self, info: dict):
+        while True:
+            if not os.path.exists(info['path']):
+                sleep(2)
+                continue
+            current_download_mb = os.path.getsize(info['path']) / self.BYTES_TO_MEGABYTES
+            total_mb = info['total'] / self.BYTES_TO_MEGABYTES
+            percentage = int(current_download_mb / total_mb * 100)
+            if info["finished"]:
+                return
+            else:
+                print(colorama.Fore.MAGENTA + f"Download Progress: {current_download_mb:.2f}/{total_mb:.2f} MB ({percentage}%)")
+            sleep(10)
+
     @status_update
     def download(self, task: ExplorerTask) -> None:
         path = task.kwargs['path']
         local_path = task.kwargs['local_path']
 
-        print(colorama.Fore.MAGENTA + f"Downloading {path}")
+        if os.path.exists(local_path):
+            os.remove(local_path)
 
-        # Checks if the path is a file or folder
-        if isinstance(self.dbx.files_get_metadata(path), FileMetadata):
-            self.dbx.files_download_to_file(local_path, path)
+        is_file = isinstance(self.dbx.files_get_metadata(path), FileMetadata)
+        total = 0
+        if is_file:
+            total = self.dbx.files_get_metadata(path).size
         else:
             local_path += ".zip"
+            print(colorama.Fore.MAGENTA + "Retrieving folder size...")
+            total = self._get_dbx_folder_size(path)
+
+        info = {
+            "path": local_path,
+            "total": total,
+            "finished": False
+        }
+
+        print(colorama.Fore.MAGENTA + f"Downloading \"{path}\" to \"{local_path}\" ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
+
+        download_progress_thread = threading.Thread(target=self._download_progress, args=[info], daemon=True)
+        download_progress_thread.start()
+
+        if is_file:
+            self.dbx.files_download_to_file(local_path, path)
+        else:
             self.dbx.files_download_zip_to_file(local_path, path)
+
+        print(colorama.Fore.MAGENTA + f"Download Finished")
+        info["finished"] = True
 
 
     @status_update
@@ -120,15 +183,12 @@ class DropboxModel(InterfaceModel):
     def api_upload_file(self, local_path: str, dbx_path: str) -> bool:
         success = False
 
-        BYTES_TO_MEGABYTES = 1000 ** 2
-        MAX_BUCKET_SIZE_BYTES = BYTES_TO_MEGABYTES * self.MAX_BUCKET_SIZE
-
         file_size = os.path.getsize(local_path)
 
-        print(colorama.Fore.BLUE + f"Uploading '{local_path}' file size: {file_size / BYTES_TO_MEGABYTES}")
+        print(colorama.Fore.BLUE + f"Uploading '{local_path}' file size: {file_size / self.BYTES_TO_MEGABYTES}")
 
         try:
-            if (file_size / BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
+            if (file_size / self.BYTES_TO_MEGABYTES) < self.MAX_BUCKET_SIZE:
                 with open(local_path, 'rb') as file:
                     data = file.read()
                     self.dbx.files_upload(data, dbx_path, WriteMode.overwrite)
@@ -136,12 +196,12 @@ class DropboxModel(InterfaceModel):
                 with open(local_path, 'rb') as file:
                     session_start_result : UploadSessionStartResult = self.dbx.files_upload_session_start(None)
 
-                    bucket_size_bytes = MAX_BUCKET_SIZE_BYTES
+                    bucket_size_bytes = self.MAX_BUCKET_SIZE_BYTES
                     session_cursor = UploadSessionCursor(session_start_result.session_id, 0)
                     commit_info = CommitInfo(dbx_path)
 
-                    number_of_buckets = int((file_size / MAX_BUCKET_SIZE_BYTES) + 1)
-                    last_append_size = file_size % MAX_BUCKET_SIZE_BYTES
+                    number_of_buckets = int((file_size / self.MAX_BUCKET_SIZE_BYTES) + 1)
+                    last_append_size = file_size % self.MAX_BUCKET_SIZE_BYTES
                     
                     print(f"bucket size: {bucket_size_bytes}")
                     print(f"last append size: {last_append_size}")
@@ -235,8 +295,22 @@ class DropboxModel(InterfaceModel):
             if not os.path.exists(file_local_path.parent):
                 os.makedirs(file_local_path.parent)
 
-            print(colorama.Fore.MAGENTA + f"Downloading {dbx_path}")
+            total = dropbox_file_metadata.size
+            print(colorama.Fore.MAGENTA + f"Downloading to local Dropbox: \"{dbx_path}\" ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
+            
+            info = {
+                "path": file_local_path,
+                "total": total,
+                "finished": False
+            }
+
+            download_progress_thread = threading.Thread(target=self._download_progress, args=[info], daemon=True)
+            download_progress_thread.start()
+            
             self.dbx.files_download_to_file(file_local_path, dbx_path)
+
+            print(colorama.Fore.MAGENTA + f"Download Finished")
+            info["finished"] = True
 
             self.update_last_time_synced(local_path, [display_path], False)
             # because we essentially 'modified' the local copy
@@ -256,10 +330,26 @@ class DropboxModel(InterfaceModel):
             os.makedirs(folder_local_path.parent)
 
         zip_path = str(folder_local_path) + ".zip"
-        print(colorama.Fore.MAGENTA + f"Downloading {dbx_path}")
+
+        print(colorama.Fore.MAGENTA + "Retrieving folder size...")
+        total = self._get_dbx_folder_size(dbx_path)
+        print(colorama.Fore.MAGENTA + f"Downloading to local Dropbox: \"{dbx_path}\" ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
+
+        info = {
+            "path": zip_path,
+            "total": total,
+            "finished": False
+        }
+
+        download_progress_thread = threading.Thread(target=self._download_progress, args=[info], daemon=True)
+        download_progress_thread.start()
+
         self.dbx.files_download_zip_to_file(zip_path, dbx_path)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(folder_local_path.parent)
+
+        print(colorama.Fore.MAGENTA + f"Download Finished")
+        info["finished"] = True
 
         files = []
 

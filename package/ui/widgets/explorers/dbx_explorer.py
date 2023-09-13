@@ -91,8 +91,12 @@ class DropboxExplorer(Explorer):
         def process_action(self, action: str) -> None:
             super().process_action(action)
             if action == 'Download':
-                download_path = QFileDialog.getSaveFileName(self, "Download Location", str(Path.home())+f"/Downloads/{self.basename}")[0]
-                description = f"Download \"{self.path}\" to \"{download_path}\""
-                self.perform_task.emit('download', {"path":self.path, "local_path":download_path, "description":description})
+                dialog_path = str(Path.home())+f"/Downloads/{self.basename}"
+                dialog_path += "" if self.is_file else ".zip"
+                result = QFileDialog.getSaveFileName(self, "Download Location", dialog_path)
+                download_path = result[0]
+                if download_path:
+                    description = f"Download \"{self.path}\" to \"{download_path}\""
+                    self.perform_task.emit('download', {"path":self.path, "local_path":download_path, "description":description})
             elif action == 'Sync':
                 self.perform_task.emit('sync', {"local_path":self.model.read_config()["DROPBOX_LOCATION"], "dbx_path":self.path, "description": "Syncing to local"})
