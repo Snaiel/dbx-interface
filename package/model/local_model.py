@@ -119,6 +119,7 @@ class LocalModel(InterfaceModel):
             # consider gitignore files
             if '.gitignore' in filenames:
                 gitignore_path = os.path.join(dirpath, '.gitignore')
+                print(colorama.Fore.CYAN + "Found .gitignore: " + gitignore_path)
                 with open(gitignore_path) as file:
                     spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, file.readlines())
                     gitignore_stack.append((gitignore_path, spec))
@@ -134,6 +135,10 @@ class LocalModel(InterfaceModel):
                 ignored_dirs_stack.append(len(new_ignored_dicts))
 
                 for filename in filenames:
+                    # construct the full local path
+                    file_local_path = os.path.join(dirpath, filename)
+                    file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
+                    
                     sync_file = True
 
                     if spec.match_file(filename):
