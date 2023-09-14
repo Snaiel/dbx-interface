@@ -1,10 +1,12 @@
-from PyQt5.QtWidgets import QWidget, QSplitter
-from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
+from PyQt5.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QMouseEvent
-from package.model.interface_model import InterfaceModel, ExplorerTask
+from PyQt5.QtWidgets import QApplication, QSplitter, QWidget
+
+from package.model.interface_model import ExplorerTask, InterfaceModel
 from package.ui.widgets.explorers.base.directory_panel import DirectoryPanel
 from package.ui.widgets.explorers.base.item_list import ItemList
 from package.ui.widgets.task_status import TaskStatusPopup
+
 
 class Explorer(QSplitter):
     '''
@@ -28,10 +30,14 @@ class Explorer(QSplitter):
         self.item_list : ItemList
 
     def change_explorer_directory(self, path):
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        
         self.current_directory = path
         self.item_list.show_list_of_items(path)
         self.item_list.current_directory = path
         self.directory_panel.change_displayed_directories(self.current_directory)
+
+        QApplication.restoreOverrideCursor()
 
         self.item_list.selected_items.clear()
         self.selection_num_changed.emit(self, 0)
