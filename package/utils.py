@@ -84,5 +84,7 @@ def clean_synced_paths(local_dbx_path: str) -> None:
 
     config["TIME_LAST_SYNCED_FROM_LOCAL"] = {key: value for key, value in config["TIME_LAST_SYNCED_FROM_LOCAL"].items() if key in files}
 
+    config['GITIGNORE_OVERRIDES'] = list(config['GITIGNORE_OVERRIDES'])
+
     with open(CONFIG_PATH, 'w') as json_file:
         json.dump(config, json_file, indent=4)
