@@ -99,13 +99,16 @@ class DropboxModel(InterfaceModel):
         webbrowser.open(f"https://www.dropbox.com/home{path}")
 
 
-    def _get_dbx_folder_size(self, path: str) -> int:
+    def _get_dbx_folder_size(self, path: str, info: dict) -> int:
         """
         recursive function to retrieve folder size in bytes
         """
         size = 0
         folders = []
         files = []
+
+        if info["finished"]:
+            return size
 
         for entry in self.dbx.files_list_folder(path).entries:
             if type(entry) == FolderMetadata:
@@ -115,26 +118,41 @@ class DropboxModel(InterfaceModel):
 
         for subfolder in folders:
             subfolder_path = path + "/" + subfolder.name
-            size += self._get_dbx_folder_size(subfolder_path)
+            size += self._get_dbx_folder_size(subfolder_path, info)
 
         for file in files:
             size += file.size
 
         return size
-    
+
+
     def _download_progress(self, info: dict):
+        dbx_path = info["dbx_path"]
+        local_path = info["local_path"]
+        if info["is_file"]:
+            total = self.dbx.files_get_metadata(dbx_path).size
+        else:
+            print(colorama.Fore.MAGENTA + "Retrieving folder size...")
+            total = self._get_dbx_folder_size(dbx_path, info)
+
+        if not info["finished"]:
+            print(colorama.Fore.MAGENTA + f"Download size: ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
+
         while True:
-            if not os.path.exists(info['path']):
-                sleep(2)
-                continue
-            current_download_mb = os.path.getsize(info['path']) / self.BYTES_TO_MEGABYTES
-            total_mb = info['total'] / self.BYTES_TO_MEGABYTES
-            percentage = int(current_download_mb / total_mb * 100)
             if info["finished"]:
                 return
-            else:
-                print(colorama.Fore.MAGENTA + f"Download Progress: {current_download_mb:.2f}/{total_mb:.2f} MB ({percentage}%)")
+            
+            if not os.path.exists(local_path):
+                sleep(2)
+                continue
+
+            current_download_mb = os.path.getsize(local_path) / self.BYTES_TO_MEGABYTES
+            total_mb = total / self.BYTES_TO_MEGABYTES
+            percentage = int(current_download_mb / total_mb * 100)
+
+            print(colorama.Fore.MAGENTA + f"Download Progress: {current_download_mb:.2f}/{total_mb:.2f} MB ({percentage}%)")
             sleep(10)
+
 
     @status_update
     def download(self, task: ExplorerTask) -> None:
@@ -145,21 +163,17 @@ class DropboxModel(InterfaceModel):
             os.remove(local_path)
 
         is_file = isinstance(self.dbx.files_get_metadata(path), FileMetadata)
-        total = 0
-        if is_file:
-            total = self.dbx.files_get_metadata(path).size
-        else:
+        if not is_file:
             local_path += ".zip"
-            print(colorama.Fore.MAGENTA + "Retrieving folder size...")
-            total = self._get_dbx_folder_size(path)
 
         info = {
-            "path": local_path,
-            "total": total,
+            "dbx_path": path,
+            "local_path": local_path,
+            "is_file": is_file,
             "finished": False
         }
 
-        print(colorama.Fore.MAGENTA + f"Downloading \"{path}\" to \"{local_path}\" ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
+        print(colorama.Fore.MAGENTA + f"Downloading \"{path}\" to \"{local_path}\"")
 
         download_progress_thread = threading.Thread(target=self._download_progress, args=[info], daemon=True)
         download_progress_thread.start()
@@ -295,12 +309,12 @@ class DropboxModel(InterfaceModel):
             if not os.path.exists(file_local_path.parent):
                 os.makedirs(file_local_path.parent)
 
-            total = dropbox_file_metadata.size
-            print(colorama.Fore.MAGENTA + f"Downloading to local Dropbox: \"{dbx_path}\" ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
+            print(colorama.Fore.MAGENTA + f"Downloading to local Dropbox: \"{dbx_path}\"")
             
             info = {
-                "path": file_local_path,
-                "total": total,
+                "dbx_path": dbx_path,
+                "local_path": file_local_path,
+                "is_file": True,
                 "finished": False
             }
 
@@ -331,16 +345,13 @@ class DropboxModel(InterfaceModel):
 
         zip_path = str(folder_local_path) + ".zip"
 
-        print(colorama.Fore.MAGENTA + "Retrieving folder size...")
-        total = self._get_dbx_folder_size(dbx_path)
-        print(colorama.Fore.MAGENTA + f"Downloading to local Dropbox: \"{dbx_path}\" ({total / self.BYTES_TO_MEGABYTES:.2f} MB)")
-
+        print(colorama.Fore.MAGENTA + f"Downloading to local Dropbox: \"{dbx_path}\"")
         info = {
-            "path": zip_path,
-            "total": total,
+            "dbx_path": dbx_path,
+            "local_path": zip_path,
+            "is_file": False,
             "finished": False
         }
-
         download_progress_thread = threading.Thread(target=self._download_progress, args=[info], daemon=True)
         download_progress_thread.start()
 
