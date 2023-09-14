@@ -120,6 +120,12 @@ class LocalModel(InterfaceModel):
             if skip_dir:
                 continue
 
+            override_gitignore = False
+            for override in gitignore_overrides:
+                if dirpath.startswith(override):
+                    override_gitignore = True
+                    break
+
             # consider gitignore files
             if '.gitignore' in filenames:
                 gitignore_path = os.path.join(dirpath, '.gitignore')
@@ -132,7 +138,7 @@ class LocalModel(InterfaceModel):
 
                 for dirname in dirnames:
                     dir_local_path = os.path.join(dirpath, dirname)
-                    if spec.match_file(dirname) and dir_local_path not in gitignore_overrides:
+                    if spec.match_file(dirname) and dir_local_path not in gitignore_overrides and not override_gitignore:
                         new_ignored_dicts.append(dir_local_path)
                         print(colorama.Fore.CYAN + "Ignoring folder in .gitignore: ", os.path.join(dirpath, dirname))
 
@@ -146,10 +152,9 @@ class LocalModel(InterfaceModel):
 
                     sync_file = True
 
-                    if spec.match_file(filename) and file_local_path not in gitignore_overrides:
-                        print(colorama.Fore.CYAN + "Ignoring file in .gitignore: ", os.path.join(dirpath, filename))
+                    if spec.match_file(filename) and file_local_path not in gitignore_overrides and not override_gitignore:
+                        print(colorama.Fore.CYAN + "Ignoring file in .gitignore: " + os.path.join(dirpath, filename))
                         sync_file = False
-                        break
 
                     if sync_file:
                         self._sync_file(file_local_path, file_relative_path, synced_paths)
@@ -159,7 +164,7 @@ class LocalModel(InterfaceModel):
                 for dirname in dirnames:
                     dir_local_path = os.path.join(dirpath, dirname)
                     for gitignore_match in applicable_gitignores:
-                        if gitignore_match.match_file(dir_local_path):
+                        if gitignore_match.match_file(dir_local_path) and dir_local_path not in gitignore_overrides and not override_gitignore:
                             ignored_directories.append(dir_local_path)
                             print(colorama.Fore.CYAN + "Ignoring folder in .gitignore: ", dir_local_path)
 
@@ -172,7 +177,7 @@ class LocalModel(InterfaceModel):
 
                     # Check if file is in a gitignore
                     for gitignore_match in applicable_gitignores:
-                        if gitignore_match.match_file(file_local_path):
+                        if gitignore_match.match_file(file_local_path) and file_local_path not in gitignore_overrides and not override_gitignore:
                             print(colorama.Fore.CYAN + "Ignoring file in .gitignore: ", file_relative_path)
                             sync_file = False
                             break
