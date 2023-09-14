@@ -48,6 +48,7 @@ def create_config(code, app_key, app_secret, dropbox_location) -> None:
         'APP_SECRET': app_secret,
         'ACCESS_TOKEN': r_data["access_token"],
         'REFRESH_TOKEN': r_data["refresh_token"],
+        'GITIGNORE_OVERRIDES': [],
         'TIME_LAST_SYNCED_FROM_CLOUD': {},
         'TIME_LAST_SYNCED_FROM_LOCAL': {}
     }
@@ -58,6 +59,10 @@ def create_config(code, app_key, app_secret, dropbox_location) -> None:
 def read_config() -> dict:
     with open(CONFIG_PATH, 'r') as json_file:
         config_data = json.load(json_file)
+        if 'GITIGNORE_OVERRIDES' not in config_data:
+            config_data['GITIGNORE_OVERRIDES'] = set()
+        else:
+            config_data['GITIGNORE_OVERRIDES'] = set(config_data['GITIGNORE_OVERRIDES'])
         return config_data
     
 def clean_synced_paths(local_dbx_path: str) -> None:

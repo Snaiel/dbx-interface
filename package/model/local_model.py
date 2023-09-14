@@ -99,7 +99,9 @@ class LocalModel(InterfaceModel):
 
     @status_update
     def sync(self, task: ExplorerTask) -> None:
-        synced_paths:dict = read_config()["TIME_LAST_SYNCED_FROM_LOCAL"]
+        config = read_config()
+        synced_paths:dict = config["TIME_LAST_SYNCED_FROM_LOCAL"]
+        gitignore_overrides: set = config["GITIGNORE_OVERRIDES"]
 
         gitignore_stack: list[tuple[str, pathspec.PathSpec]] = []
         applicable_gitignores: list[pathspec.PathSpec] = []
@@ -108,6 +110,8 @@ class LocalModel(InterfaceModel):
         ignored_dirs_stack: list[int] = []
 
         for dirpath, dirnames, filenames in os.walk(self.local_root):
+            # Checks if the current directory is in ignored_directories.
+            # If so, continue to next directory
             skip_dir = False
             for dir in ignored_directories:
                 if dirpath.startswith(dir):
@@ -127,8 +131,9 @@ class LocalModel(InterfaceModel):
                 new_ignored_dicts = []
 
                 for dirname in dirnames:
-                    if spec.match_file(dirname):
-                        new_ignored_dicts.append(os.path.join(dirpath, dirname))
+                    dir_local_path = os.path.join(dirpath, dirname)
+                    if spec.match_file(dirname) and dir_local_path not in gitignore_overrides:
+                        new_ignored_dicts.append(dir_local_path)
                         print(colorama.Fore.CYAN + "Ignoring folder in .gitignore: ", os.path.join(dirpath, dirname))
 
                 ignored_directories.extend(new_ignored_dicts)
@@ -138,10 +143,10 @@ class LocalModel(InterfaceModel):
                     # construct the full local path
                     file_local_path = os.path.join(dirpath, filename)
                     file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
-                    
+
                     sync_file = True
 
-                    if spec.match_file(filename):
+                    if spec.match_file(filename) and file_local_path not in gitignore_overrides:
                         print(colorama.Fore.CYAN + "Ignoring file in .gitignore: ", os.path.join(dirpath, filename))
                         sync_file = False
                         break
