@@ -63,6 +63,13 @@ def read_config() -> dict:
             config_data['GITIGNORE_OVERRIDES'] = set()
         else:
             config_data['GITIGNORE_OVERRIDES'] = set(config_data['GITIGNORE_OVERRIDES'])
+
+        if "TIME_LAST_SYNCED_FROM_LOCAL" not in config_data:
+            config_data["TIME_LAST_SYNCED_FROM_LOCAL"] = dict()
+        
+        if "TIME_LAST_SYNCED_FROM_CLOUD" not in config_data:
+            config_data["TIME_LAST_SYNCED_FROM_CLOUD"] = dict()
+
         return config_data
     
 def clean_synced_paths(local_dbx_path: str) -> None:
@@ -78,8 +85,9 @@ def clean_synced_paths(local_dbx_path: str) -> None:
     config: dict = read_config()
 
     if "SYNCED_PATHS" in config:
-        print("Changing SYNCED_PATHS to TIME_LAST_SYNCED_FROM_LOCAL")
-        config["TIME_LAST_SYNCED_FROM_LOCAL"] = config["SYNCED_PATHS"]
+        if "TIME_LAST_SYNCED_FROM_LOCAL" not in config:
+            print("Changing SYNCED_PATHS to TIME_LAST_SYNCED_FROM_LOCAL")
+            config["TIME_LAST_SYNCED_FROM_LOCAL"] = config["SYNCED_PATHS"]
         config.pop("SYNCED_PATHS")
 
     config["TIME_LAST_SYNCED_FROM_LOCAL"] = {key: value for key, value in config["TIME_LAST_SYNCED_FROM_LOCAL"].items() if key in files}
