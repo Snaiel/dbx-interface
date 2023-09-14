@@ -71,7 +71,13 @@ def clean_synced_paths(local_dbx_path: str) -> None:
             files.append(file_relative_path)
 
     config: dict = read_config()
-    config['TIME_LAST_SYNCED_FROM_LOCAL'] = {key: value for key, value in config['TIME_LAST_SYNCED_FROM_LOCAL'].items() if key in files}
+
+    if "SYNCED_PATHS" in config:
+        print("Changing SYNCED_PATHS to TIME_LAST_SYNCED_FROM_LOCAL")
+        config["TIME_LAST_SYNCED_FROM_LOCAL"] = config["SYNCED_PATHS"]
+        config.pop("SYNCED_PATHS")
+
+    config["TIME_LAST_SYNCED_FROM_LOCAL"] = {key: value for key, value in config["TIME_LAST_SYNCED_FROM_LOCAL"].items() if key in files}
 
     with open(CONFIG_PATH, 'w') as json_file:
         json.dump(config, json_file, indent=4)
