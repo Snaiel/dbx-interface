@@ -9,10 +9,12 @@ from pprint import pprint
 from time import sleep
 
 import colorama
+import pytz
 from dropbox import Dropbox
 from dropbox.exceptions import ApiError
-from dropbox.files import (CommitInfo, FileMetadata, FolderMetadata, UploadSessionCursor,
-                           UploadSessionStartResult, WriteMode)
+from dropbox.files import (CommitInfo, FileMetadata, FolderMetadata,
+                           UploadSessionCursor, UploadSessionStartResult,
+                           WriteMode)
 
 from package.model.interface_model import (ExplorerTask, InterfaceModel,
                                            MyThread)
@@ -268,16 +270,19 @@ class DropboxModel(InterfaceModel):
         local_path = task.kwargs['local_path']
         dbx_path = task.kwargs['dbx_path']
 
-        synced_paths: dict = read_config()["TIME_LAST_SYNCED_FROM_CLOUD"]
+        config = read_config()
+
+        synced_paths: dict = config["TIME_LAST_SYNCED_FROM_CLOUD"]
+        time_zone: str = config["TIME_ZONE"]
 
         if Path(dbx_path).suffix:
-            self.sync_file(local_path, dbx_path, synced_paths)
+            self.sync_file(local_path, dbx_path, synced_paths, time_zone)
         else:
-            self.sync_folder(local_path, dbx_path, synced_paths)
+            self.sync_folder(local_path, dbx_path)
         self.refresh()
 
 
-    def sync_file(self, local_path: str, dbx_path: str, synced_paths: dict) -> None:
+    def sync_file(self, local_path: str, dbx_path: str, synced_paths: dict, time_zone: str) -> None:
         """
         local_path: the user's local dropbox location
         dbx_path: the path to the file on the user's dropbox cloud
@@ -287,9 +292,13 @@ class DropboxModel(InterfaceModel):
 
         display_path = dropbox_file_metadata.path_display
 
-        last_dropbox_modification_dt = dropbox_file_metadata.server_modified
+        tz = pytz.timezone(time_zone)
+
+        last_dropbox_modification_utc_dt: datetime.datetime = dropbox_file_metadata.server_modified
+        last_dropbox_modification_utc_dt = pytz.UTC.localize(last_dropbox_modification_utc_dt)
 
         file_local_path = Path(local_path, display_path[1:])
+
 
         download = False
         if display_path in synced_paths:
@@ -297,8 +306,9 @@ class DropboxModel(InterfaceModel):
             # Convert the timestamp to a datetime object
             last_synced_dt = datetime.datetime.fromtimestamp(last_synced_timestamp)
             last_synced_dt = last_synced_dt.replace(microsecond=0)
+            last_synced_dt = tz.localize(last_synced_dt)
 
-            if last_synced_dt < last_dropbox_modification_dt:
+            if last_synced_dt < last_dropbox_modification_utc_dt:
                 download = True
             else:
                 print(colorama.Fore.GREEN + "Didn't need to sync/download " + display_path)
@@ -331,7 +341,7 @@ class DropboxModel(InterfaceModel):
             self.update_last_time_synced(local_path, [display_path])
 
 
-    def sync_folder(self, local_path: str, dbx_path: str, synced_paths: dict) -> None:
+    def sync_folder(self, local_path: str, dbx_path: str) -> None:
         """
         local_path: the user's local dropbox location
         dbx_path: the path to the folder on the user's dropbox cloud

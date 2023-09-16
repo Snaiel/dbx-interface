@@ -3,15 +3,21 @@ This module accesses Dropbox
 Takes care of auth and gets the files & folders
 """
 
+import json
+import os
+from datetime import datetime
 from pathlib import Path
-import requests, json, os
+
+import pytz
+import requests
 from dropbox import Dropbox
 from dropbox.exceptions import AuthError
 
 PROJECT_ROOT = Path(__file__).parents[1]
 CONFIG_PATH = Path(PROJECT_ROOT, 'config.json')
 
-TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+OLD_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S%z"
 
 def create_dbx() -> Dropbox:
     with open(CONFIG_PATH, 'r+') as json_file:
@@ -98,5 +104,21 @@ def clean_synced_paths(local_dbx_path: str) -> None:
     config['TIME_LAST_SYNCED_FROM_CLOUD'] = config.pop("TIME_LAST_SYNCED_FROM_CLOUD")
     config['TIME_LAST_SYNCED_FROM_LOCAL'] = config.pop("TIME_LAST_SYNCED_FROM_LOCAL")
 
+    # convert any old timestamp to use time zones
+    convert_to_time_zone_format(config, 'TIME_LAST_SYNCED_FROM_CLOUD')
+    convert_to_time_zone_format(config, 'TIME_LAST_SYNCED_FROM_LOCAL')
+
     with open(CONFIG_PATH, 'w') as json_file:
         json.dump(config, json_file, indent=4)
+
+
+def convert_to_time_zone_format(config: dict, synced_times_key: str):
+    for path, timestamp_str in config[synced_times_key].items():
+        try:
+            timestamp_datetime = datetime.strptime(timestamp_str, OLD_TIMESTAMP_FORMAT)
+            tz = pytz.timezone(config["TIME_ZONE"])
+            timestamp_datetime_tz = tz.localize(timestamp_datetime)
+            config[synced_times_key][path] = timestamp_datetime_tz.strftime(TIMESTAMP_FORMAT)
+        except ValueError as e:
+            # correct time zone format
+            pass
