@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog
-from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QTextEdit
+from PyQt5.QtCore import Qt, QEvent, QDir
 from package.utils import create_config
+import pytz
 
 INFO_TEXT = '''
 1. Select the 'Scoped access' API
@@ -44,7 +45,7 @@ class StarterWindow(QDialog):
             else:
                 input_form = object.parent() #type: InputForm
                 app_info = input_form.get_app_info()
-                create_config(app_info[2], app_info[0], app_info[1], self.dropbox_location.get_location())
+                create_config(app_info[2], app_info[0], app_info[1], self.dropbox_location.get_location(), app_info[3])
                 input_form.set_done_visible()
         return False
 
@@ -53,7 +54,10 @@ class DropboxLocation(QWidget):
         super().__init__()
 
         layout = QGridLayout(self)
-        layout.addWidget(QLabel("Welcome to dbx-interface.\nTo get started, provide the desired path location of your local Dropbox folder"), 0, 0, 1, 2)
+        layout.addWidget(
+            QLabel("Welcome to dbx-interface.\nTo get started, provide the desired path location of your local Dropbox folder.\nMake sure to create the Dropbox folder itself."), 
+            0, 0, 1, 2
+        )
         self.location_line_edit = QLineEdit()
         self.location_picker_button = QPushButton("Select folder")
         self.location_picker_button.setStyleSheet("padding: 3px 25px")
@@ -64,7 +68,9 @@ class DropboxLocation(QWidget):
 
     def pick_location(self):
         dialog = QFileDialog()
-        folder_path = dialog.getExistingDirectory(None, "Select Folder")
+        options = QFileDialog.Options()
+        options |= QFileDialog.Option.ShowDirsOnly
+        folder_path = dialog.getExistingDirectory(self, "Select Folder", QDir.homePath())
         self.location_line_edit.setText(folder_path)
 
     def get_location(self) -> str:
@@ -84,17 +90,20 @@ class InfoBox(QWidget):
         hyperlink.setOpenExternalLinks(True)
         layout.addWidget(hyperlink)
 
+        layout.addWidget(QLabel("(Note: if have already set this up on another device,\nyou can just retrieve the info previously created)"))
+
         layout.addWidget(QLabel(INFO_TEXT))
 
 class InputForm(QWidget):
     def __init__(self, parent):
         super().__init__()
-        self.setFixedWidth(400)
+        self.setFixedWidth(300)
 
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        layout.setContentsMargins(80, 11, 11, 11)
+        layout.setContentsMargins(20, 8, 11, 11)
 
+        # App details
         layout.addWidget(QLabel("App key"))
         self.app_key = QLineEdit(self)
         layout.addWidget(self.app_key)
@@ -110,6 +119,7 @@ class InputForm(QWidget):
         self.app_key.textChanged.connect(lambda state, inputs=[self.app_key, self.app_secret], btn=self.app_info_submit:self.toggle_submit_disabled(inputs, btn))
         self.app_secret.textChanged.connect(lambda state, inputs=[self.app_key, self.app_secret], btn=self.app_info_submit:self.toggle_submit_disabled(inputs, btn))
 
+        # App Authorization
         self.auth_hyperlink = QLabel(f"<a href=\"\">Click here to authorize your app</a>")
         self.auth_hyperlink.setOpenExternalLinks(True)
         self.auth_hyperlink.setContentsMargins(0, 40, 0, 0)
@@ -122,18 +132,42 @@ class InputForm(QWidget):
         self.auth_code = QLineEdit(self)
         layout.addWidget(self.auth_code)
 
-        self.auth_submit = QPushButton("Submit")
+        self.auth_submit = QPushButton("Authorise")
         self.auth_submit.setDisabled(True)
-        self.auth_submit.installEventFilter(parent)
+        self.auth_submit.clicked.connect(self.set_time_zone_visible)
         layout.addWidget(self.auth_submit)
-
-        self.auth_code.textChanged.connect(lambda state, inputs=[self.auth_code, parent.dropbox_location.location_line_edit], btn=self.auth_submit:self.toggle_submit_disabled(inputs, btn))
-        parent.dropbox_location.location_line_edit.textChanged.connect(lambda state, inputs=[self.auth_code, parent.dropbox_location.location_line_edit], btn=self.auth_submit:self.toggle_submit_disabled(inputs, btn))
 
         self.auth_hyperlink.setVisible(False)
         self.auth_code_label.setVisible(False)
         self.auth_code.setVisible(False)
         self.auth_submit.setVisible(False)
+
+        self.auth_code.textChanged.connect(lambda state, inputs=[self.auth_code, parent.dropbox_location.location_line_edit], btn=self.auth_submit : self.toggle_submit_disabled(inputs, btn))
+        parent.dropbox_location.location_line_edit.textChanged.connect(lambda state, inputs=[self.auth_code, parent.dropbox_location.location_line_edit], btn=self.auth_submit : self.toggle_submit_disabled(inputs, btn))
+
+        # Time zone
+        self.time_zone_label = QLabel("Time zone\nThis will be used to compare sync times.")
+        self.time_zone_label.setContentsMargins(0, 40, 0, 0)
+        layout.addWidget(self.time_zone_label)
+
+        self.see_time_zones_button = QPushButton("See time zones")
+        self.see_time_zones_button.clicked.connect(self.see_time_zones)
+        layout.addWidget(self.see_time_zones_button)
+
+        self.time_zone = QLineEdit(self)
+        layout.addWidget(self.time_zone)
+
+        self.time_zone_submit = QPushButton("Submit")
+        self.time_zone_submit.setDisabled(True)
+        self.time_zone_submit.installEventFilter(parent)
+        layout.addWidget(self.time_zone_submit)
+
+        self.time_zone_label.setVisible(False)
+        self.see_time_zones_button.setVisible(False)
+        self.time_zone.setVisible(False)
+        self.time_zone_submit.setVisible(False)
+
+        self.time_zone.textChanged.connect(lambda state, tz=self.time_zone, btn=self.time_zone_submit : self.validate_time_zone(tz, btn))
 
         self.done_label = QLabel("Setup complete")
         self.done_label.setContentsMargins(0, 40, 0, 0)
@@ -146,26 +180,66 @@ class InputForm(QWidget):
         self.done_button.setVisible(False)
 
     def toggle_submit_disabled(self, inputs: list, btn: QPushButton):
-        inputs_have_text = True
+        inputs_all_have_text = True
         for input in inputs:
             input: QLineEdit
-            if len(input.text()) == 0:
-                inputs_have_text = False
+            if len(input.text().strip()) == 0:
+                inputs_all_have_text = False
+                break
 
-        btn.setDisabled(False if inputs_have_text else True)
+        btn.setDisabled(False if inputs_all_have_text else True)
 
 
     def set_auth_visible(self):
-        auth_link = f"https://www.dropbox.com/oauth2/authorize?client_id={self.app_key.text()}&response_type=code&token_access_type=offline"
+        auth_link = f"https://www.dropbox.com/oauth2/authorize?client_id={self.app_key.text().strip()}&response_type=code&token_access_type=offline"
         self.auth_hyperlink.setText(f"<a href=\"{auth_link}\">Click here to authorize your app</a>")
         self.auth_hyperlink.setVisible(True)
         self.auth_code_label.setVisible(True)
         self.auth_code.setVisible(True)
         self.auth_submit.setVisible(True)
 
+
+    def set_time_zone_visible(self):
+        self.time_zone_label.setVisible(True)
+        self.see_time_zones_button.setVisible(True)
+        self.time_zone.setVisible(True)
+        self.time_zone_submit.setVisible(True)
+
+
+    def see_time_zones(self):
+        popup = TimeZonesWindow(self)
+        popup.exec_()
+
+    def validate_time_zone(self, time_zone: QLineEdit, btn: QPushButton):
+        if time_zone.text().strip() in pytz.all_timezones:
+            btn.setDisabled(False)
+        else:
+            btn.setDisabled(True)
+
+
     def set_done_visible(self):
         self.done_label.setVisible(True)
         self.done_button.setVisible(True)
 
-    def get_app_info(self):
-        return (self.app_key.text(), self.app_secret.text(), self.auth_code.text())
+    def get_app_info(self) -> tuple[str]:
+        return (self.app_key.text().strip(), self.app_secret.text().strip(), self.auth_code.text().strip(), self.time_zone.text().strip())
+    
+
+class TimeZonesWindow(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.setWindowTitle("Popup Window")
+        self.setGeometry(100, 100, 400, 300)
+
+        layout = QVBoxLayout()
+
+        self.text_edit = QTextEdit()
+        self.text_edit.setPlainText('\n'.join(pytz.all_timezones))
+        layout.addWidget(self.text_edit)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
+
+        self.setLayout(layout)

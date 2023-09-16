@@ -33,17 +33,18 @@ def validate_dbx(dbx: Dropbox) -> bool:
     except AuthError:
         return False
 
-def create_config(code, app_key, app_secret, dropbox_location) -> None:
+def create_config(code: str, app_key: str, app_secret: str, dropbox_location: str, time_zone: str) -> None:
     data = {
-            'code': code,
-            'grant_type': 'authorization_code',
-        }
+        'code': code,
+        'grant_type': 'authorization_code',
+    }
 
     r = requests.post('https://api.dropbox.com/oauth2/token', data=data, auth=(app_key, app_secret))
     r_data = r.json()
 
     config_data = {
         'DROPBOX_LOCATION': dropbox_location,
+        'TIME_ZONE': time_zone,
         'APP_KEY': app_key,
         'APP_SECRET': app_secret,
         'ACCESS_TOKEN': r_data["access_token"],
