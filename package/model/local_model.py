@@ -8,6 +8,7 @@ from typing import Callable
 
 import colorama
 import pathspec
+import pytz
 
 from package.model.dbx_model import DropboxModel
 from package.model.interface_model import (ExplorerTask, InterfaceModel,
@@ -100,8 +101,9 @@ class LocalModel(InterfaceModel):
     @status_update
     def sync(self, task: ExplorerTask) -> None:
         config = read_config()
-        synced_paths:dict = config["TIME_LAST_SYNCED_FROM_LOCAL"]
+        synced_paths: dict = config["TIME_LAST_SYNCED_FROM_LOCAL"]
         gitignore_overrides: set = config["GITIGNORE_OVERRIDES"]
+        time_zone: str = config["TIME_ZONE"]
 
         gitignore_stack: list[tuple[str, pathspec.PathSpec]] = []
         applicable_gitignores: list[pathspec.PathSpec] = []
@@ -157,7 +159,7 @@ class LocalModel(InterfaceModel):
                         sync_file = False
 
                     if sync_file:
-                        self._sync_file(file_local_path, file_relative_path, synced_paths)
+                        self._sync_file(file_local_path, file_relative_path, synced_paths, time_zone)
             else:
                 applicable_gitignores = self._get_applicable_gitignores(dirpath, gitignore_stack)
 
@@ -183,7 +185,7 @@ class LocalModel(InterfaceModel):
                             break
 
                     if sync_file:
-                        self._sync_file(file_local_path, file_relative_path, synced_paths)
+                        self._sync_file(file_local_path, file_relative_path, synced_paths, time_zone)
 
             # Remove the top .gitignore file from the stack when leaving the directory
             if gitignore_stack and not dirpath.startswith(os.path.dirname(gitignore_stack[-1][0])):
@@ -197,13 +199,16 @@ class LocalModel(InterfaceModel):
 
         self.refresh()
 
-    def _sync_file(self, file_local_path: str, file_relative_path: str, synced_paths: dict[str, str]):
+    def _sync_file(self, file_local_path: str, file_relative_path: str, synced_paths: dict[str, str], time_zone: str):
         modified_timestamp = os.path.getmtime(file_local_path)
         # Convert the timestamp to a datetime object
         modified_dt = datetime.datetime.fromtimestamp(modified_timestamp)
         modified_dt = modified_dt.replace(microsecond=0)
+        tz = pytz.timezone(time_zone)
+        modified_dt = tz.localize(modified_dt)
         # Format the datetime object as a string
         modified_formatted = modified_dt.strftime(TIMESTAMP_FORMAT)
+
 
         if file_relative_path in synced_paths:
             modified_synced = datetime.datetime.strptime(synced_paths[file_relative_path], TIMESTAMP_FORMAT)
