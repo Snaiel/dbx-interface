@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import shutil
 import threading
 import webbrowser
 import zipfile
@@ -352,6 +353,8 @@ class DropboxModel(InterfaceModel):
 
         if not os.path.exists(folder_local_path.parent):
             os.makedirs(folder_local_path.parent)
+        elif os.path.exists(folder_local_path):
+            shutil.rmtree(folder_local_path)
 
         zip_path = str(folder_local_path) + ".zip"
 
