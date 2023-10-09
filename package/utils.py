@@ -3,7 +3,7 @@ This module accesses Dropbox
 Takes care of auth and gets the files & folders
 """
 
-import json
+import json, pytz
 import os
 from datetime import datetime
 from pathlib import Path
@@ -97,7 +97,16 @@ def clean_synced_paths(local_dbx_path: str) -> None:
             config["TIME_LAST_SYNCED_FROM_LOCAL"] = config["SYNCED_PATHS"]
         config.pop("SYNCED_PATHS")
 
-    config["TIME_LAST_SYNCED_FROM_LOCAL"] = {key: value for key, value in config["TIME_LAST_SYNCED_FROM_LOCAL"].items() if key in files}
+    tz = pytz.timezone(config['TIME_ZONE'])
+    new_time_last_synced_from_local = {path: time for path, time in config["TIME_LAST_SYNCED_FROM_LOCAL"].items() if path in files}
+
+    for path, time in new_time_last_synced_from_local.items():
+        try:
+            datetime.strptime(time, TIMESTAMP_FORMAT)
+        except ValueError:
+            dt = datetime.strptime(time, OLD_TIMESTAMP_FORMAT)
+            dt = tz.localize(dt)
+            new_time_last_synced_from_local[path] = datetime.strftime(dt, TIMESTAMP_FORMAT)
 
     config['GITIGNORE_OVERRIDES'] = list(config['GITIGNORE_OVERRIDES'])
 
