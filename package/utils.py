@@ -3,8 +3,9 @@ This module accesses Dropbox
 Takes care of auth and gets the files & folders
 """
 
-import json, pytz
+import json
 import os
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 
@@ -79,15 +80,17 @@ def read_config() -> dict:
 
         return config_data
     
-def clean_synced_paths(local_dbx_path: str) -> None:
+def clean_synced_paths(local_dbx_path: str) -> Iterable[str]:
     print("Cleaning TIME_LAST_SYNCED_FROM_LOCAL")
-    files = []
+    existing_files = []
+    existing_folders = set()
 
     for dirpath, dirnames, filenames in os.walk(local_dbx_path):
+        existing_folders.add("/" + os.path.relpath(dirpath, local_dbx_path))
         for filename in filenames:
             file_local_path = os.path.join(dirpath, filename)
             file_relative_path = "/" + os.path.relpath(file_local_path, local_dbx_path)
-            files.append(file_relative_path)
+            existing_files.append(file_relative_path)
 
     config: dict = read_config()
 
@@ -97,9 +100,15 @@ def clean_synced_paths(local_dbx_path: str) -> None:
             config["TIME_LAST_SYNCED_FROM_LOCAL"] = config["SYNCED_PATHS"]
         config.pop("SYNCED_PATHS")
 
-    tz = pytz.timezone(config['TIME_ZONE'])
-    new_time_last_synced_from_local = {path: time for path, time in config["TIME_LAST_SYNCED_FROM_LOCAL"].items() if path in files}
+    new_time_last_synced_from_local = {}
+    nonexistent_files = set()
+    for path, time in config["TIME_LAST_SYNCED_FROM_LOCAL"].items():
+        if path in existing_files:
+            new_time_last_synced_from_local[path] = time
+        else:
+            nonexistent_files.add(path)
 
+    tz = pytz.timezone(config['TIME_ZONE'])
     for path, time in new_time_last_synced_from_local.items():
         try:
             datetime.strptime(time, TIMESTAMP_FORMAT)
@@ -108,8 +117,13 @@ def clean_synced_paths(local_dbx_path: str) -> None:
             dt = tz.localize(dt)
             new_time_last_synced_from_local[path] = datetime.strftime(dt, TIMESTAMP_FORMAT)
 
+    config['TIME_LAST_SYNCED_FROM_LOCAL'] = new_time_last_synced_from_local
+
     config['GITIGNORE_OVERRIDES'] = list(config['GITIGNORE_OVERRIDES'])
 
+    # This may look useless, but removing them and adding them back in again
+    # puts them at the bottom of the file so that other attributes can be
+    # seen at the top of the config file
     config['TIME_LAST_SYNCED_FROM_CLOUD'] = config.pop("TIME_LAST_SYNCED_FROM_CLOUD")
     config['TIME_LAST_SYNCED_FROM_LOCAL'] = config.pop("TIME_LAST_SYNCED_FROM_LOCAL")
 
@@ -119,6 +133,8 @@ def clean_synced_paths(local_dbx_path: str) -> None:
 
     with open(CONFIG_PATH, 'w') as json_file:
         json.dump(config, json_file, indent=4)
+
+    return find_paths_to_delete(existing_folders, nonexistent_files)
 
 
 def convert_to_time_zone_format(config: dict, synced_times_key: str):
@@ -131,3 +147,40 @@ def convert_to_time_zone_format(config: dict, synced_times_key: str):
         except ValueError as e:
             # correct time zone format
             pass
+
+
+def find_paths_to_delete(existing_folders, nonexistent_files) -> set[str]:
+    folders_to_delete = set()
+    files_to_delete = set()
+
+    for file_path in nonexistent_files:
+        # if the file is inside a directory that will be deleted anyway,
+        # continue to next file
+        if path_inside_path(file_path, folders_to_delete):
+            continue
+
+        prev_dir_path = ""
+        dir_path = os.path.dirname(file_path)
+
+        if dir_path in existing_folders:
+            files_to_delete.add(file_path)
+            continue
+
+        # find the dir_path that does exist
+        while dir_path not in existing_folders and dir_path != '':
+            prev_dir_path = dir_path
+            dir_path = os.path.dirname(dir_path)
+
+        # at this point dir_path is a path that exists,
+        # so prev_dir_path is the highest dir that does not exist
+        if prev_dir_path:
+            folders_to_delete.add(prev_dir_path)
+
+    return folders_to_delete.union(files_to_delete)
+
+
+def path_inside_path(path: str, paths: Iterable[str]):
+    for cur_path in paths:
+        if path.startswith(cur_path):
+            return True
+    return False

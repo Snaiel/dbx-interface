@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 from package.ui.main_window import MainWindow
 from package.ui.starter_window import StarterWindow
+from package.ui.delete_nonexistent import DeleteNonExistent
 
 def run(setup: bool = False) -> int:
     app = QApplication(sys.argv)
@@ -32,7 +33,10 @@ def run(setup: bool = False) -> int:
             print_error_help()
             return 0
         
-    utils.clean_synced_paths(json_data['DROPBOX_LOCATION'])
+    paths_to_delete = utils.clean_synced_paths(json_data['DROPBOX_LOCATION'])
+    if paths_to_delete:
+        delete_nonexistent = DeleteNonExistent(dbx, paths_to_delete)
+        delete_nonexistent.exec_()
 
     window = MainWindow(dbx, json_data['DROPBOX_LOCATION'])
     window.show()
