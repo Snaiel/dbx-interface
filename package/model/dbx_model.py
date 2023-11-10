@@ -19,7 +19,7 @@ from dropbox.files import (CommitInfo, FileMetadata, FolderMetadata,
 
 from package.model.interface_model import (ExplorerTask, InterfaceModel,
                                            MyThread)
-from package.utils import read_config
+from package.utils import TIMESTAMP_FORMAT, read_config
 
 colorama.init(autoreset=True)
 
@@ -279,7 +279,7 @@ class DropboxModel(InterfaceModel):
         if Path(dbx_path).suffix:
             self.sync_file(local_path, dbx_path, synced_paths, time_zone)
         else:
-            self.sync_folder(local_path, dbx_path)
+            self.sync_folder(local_path, dbx_path, time_zone)
         self.refresh()
 
 
@@ -337,12 +337,12 @@ class DropboxModel(InterfaceModel):
             print(colorama.Fore.MAGENTA + f"Download Finished")
             info["finished"] = True
 
-            self.update_last_time_synced(local_path, [display_path], False)
+            self.update_last_time_synced(local_path, [display_path], time_zone, False)
             # because we essentially 'modified' the local copy
-            self.update_last_time_synced(local_path, [display_path])
+            self.update_last_time_synced(local_path, [display_path], time_zone)
 
 
-    def sync_folder(self, local_path: str, dbx_path: str) -> None:
+    def sync_folder(self, local_path: str, dbx_path: str, time_zone: str) -> None:
         """
         local_path: the user's local dropbox location
         dbx_path: the path to the folder on the user's dropbox cloud
@@ -384,13 +384,13 @@ class DropboxModel(InterfaceModel):
                 file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
                 files.append(file_relative_path)
 
-        self.update_last_time_synced(local_path, files)
+        self.update_last_time_synced(local_path, files, time_zone)
 
         os.remove(zip_path)
 
-    def update_last_time_synced(self, local_path: str, new_paths: list[str], local: bool = True):
+    def update_last_time_synced(self, local_path: str, new_paths: list[str], time_zone: str, local: bool = True):
         '''
-        puts all the paths in new_paths in TIME_LAST_SYNCED_FROM_LOCAL with their
+        puts all the paths in new_paths in TIME_LAST_SYNCED_FROM_... with their
         modified time.
 
         local_path: the path to the user's local dropbox folder
@@ -414,7 +414,9 @@ class DropboxModel(InterfaceModel):
                 dt = datetime.datetime.fromtimestamp(timestamp)
                 dt = dt.replace(microsecond=0)
                 # Format the datetime object as a string
-                formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
+                tz = pytz.timezone(time_zone)
+                dt = tz.localize(dt)
+                formatted = dt.strftime(TIMESTAMP_FORMAT)
                 
                 new_entries[path] = formatted
 
