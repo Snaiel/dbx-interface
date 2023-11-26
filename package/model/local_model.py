@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import platform
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Callable
@@ -59,7 +60,7 @@ class LocalModel(InterfaceModel):
         if os.path.isfile(path):
             os.remove(path)
         else:
-            os.rmdir(path)
+            shutil.rmtree(path)
 
     @status_update
     def delete_local(self, task: ExplorerTask) -> None:
