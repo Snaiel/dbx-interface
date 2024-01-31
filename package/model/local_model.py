@@ -219,7 +219,8 @@ class LocalModel(InterfaceModel):
                     synced_paths[file_relative_path] = modified_formatted
                     self._write_to_synced_paths(synced_paths)
             else:
-                print(colorama.Fore.GREEN + "Didn't need to sync: ", file_relative_path, modified_formatted)
+                pass
+                # print(colorama.Fore.GREEN + "Didn't need to sync: ", file_relative_path, modified_formatted)
         else:
             success = self.dbx_model.api_upload_file(file_local_path, file_relative_path)
             if success:
