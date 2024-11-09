@@ -14,8 +14,8 @@ import pytz
 from dropbox import Dropbox
 from dropbox.exceptions import ApiError
 from dropbox.files import (CommitInfo, FileMetadata, FolderMetadata,
-                           UploadSessionCursor, UploadSessionStartResult,
-                           WriteMode)
+                           GetMetadataError, UploadSessionCursor,
+                           UploadSessionStartResult, WriteMode)
 
 from package.model.interface_model import (ExplorerTask, InterfaceModel,
                                            MyThread)
@@ -238,6 +238,10 @@ class DropboxModel(InterfaceModel):
 
                     print("finish up")
 
+                    if self._file_exists(dbx_path):
+                        print("deleting previous file")
+                        self.dbx.files_delete(dbx_path)
+
                     self.dbx.files_upload_session_finish(None, session_cursor, commit_info)
 
             success = True
@@ -424,3 +428,13 @@ class DropboxModel(InterfaceModel):
             json_file.seek(0)
             json.dump(json_data, json_file, indent=4)
             json_file.truncate()
+    
+
+    def _file_exists(self, path):
+        try:
+            self.dbx.files_get_metadata(path)
+            return True
+        except ApiError as e:
+            if isinstance(e.error, GetMetadataError) and e.error.is_path() and e.error.get_path().is_not_found():
+                return False
+            raise e
