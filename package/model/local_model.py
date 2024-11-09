@@ -41,7 +41,8 @@ class LocalModel(InterfaceModel):
             'delete_local_and_cloud': self.delete_local_and_cloud,
             'rename': self.rename,
             'open': self.open_path,
-            'sync': self.sync
+            'sync': self.sync,
+            'mark_as_synced': self.mark_as_synced
         }
 
         thread = MyThread(self, ACTION_FUNC[task.action], [task])
@@ -89,6 +90,34 @@ class LocalModel(InterfaceModel):
         else:
             subprocess.Popen(["xdg-open", path])
 
+    @status_update
+    def mark_as_synced(self, task: ExplorerTask) -> None:
+        path: str = task.kwargs['path']
+        is_file: bool = task.kwargs['is_file']            
+
+        config = read_config()
+        synced_paths: dict = config["TIME_LAST_SYNCED_FROM_LOCAL"]
+        time_zone: str = config["TIME_ZONE"]
+
+        current_time = datetime.datetime.now()
+        current_time = current_time.replace(microsecond=0)
+        tz = pytz.timezone(time_zone)
+        current_time = tz.localize(current_time)
+        current_time_formatted = current_time.strftime(TIMESTAMP_FORMAT)
+
+        if is_file:
+            file_relative_path = "/" + os.path.relpath(path, self.local_root)
+            synced_paths[file_relative_path] = current_time_formatted
+        else:
+            for dirpath, dirnames, filenames in os.walk(path):
+                for filename in filenames:
+                    file_local_path = os.path.join(dirpath, filename)
+                    file_relative_path = "/" + os.path.relpath(file_local_path, self.local_root)
+                    synced_paths[file_relative_path] = current_time_formatted
+        
+        self._write_to_synced_paths(synced_paths)
+
+
     @staticmethod
     def _get_applicable_gitignores(path: str, gitignore_stack: list[tuple[str, pathspec.PathSpec]]) -> list:
         applicable: Callable[[str], bool] = []
@@ -134,7 +163,7 @@ class LocalModel(InterfaceModel):
                 gitignore_path = os.path.join(dirpath, '.gitignore')
                 print(colorama.Fore.CYAN + "Found .gitignore: " + gitignore_path)
                 with open(gitignore_path) as file:
-                    spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, file.readlines())
+                    spec = pathspec.GitIgnoreSpec.from_lines(file.readlines())
                     gitignore_stack.append((gitignore_path, spec))
 
                 new_ignored_dicts = []

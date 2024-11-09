@@ -81,6 +81,8 @@ class LocalExplorer(Explorer):
             self.menu.addSeparator()
             self.menu.addAction("Open")
             self.menu.addAction("Open Containing Folder")
+            self.menu.addSeparator()
+            self.menu.addAction("Mark as Synced")
 
         def process_action(self, action: str) -> None:
             super().process_action(action)
@@ -106,3 +108,6 @@ class LocalExplorer(Explorer):
                     description = f"Delete \"{self.path}\""
                     self.perform_task.emit('delete_local_and_cloud', {"path":self.path, "description":description})
                     self.deleteLater()
+            elif action == "Mark as Synced":
+                description = f"Mark \"{self.path}\" as Synced"
+                self.perform_task.emit('mark_as_synced', {"path":self.path, "description":description, "is_file":self.is_file})
