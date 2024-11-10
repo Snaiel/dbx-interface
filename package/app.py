@@ -34,6 +34,7 @@ def run(setup: bool = False) -> int:
             return 0
         
     paths_to_delete = utils.clean_synced_paths(json_data['DROPBOX_LOCATION'])
+    print("Starting application")
     if paths_to_delete:
         delete_nonexistent = DeleteNonExistent(dbx, paths_to_delete)
         delete_nonexistent.exec_()

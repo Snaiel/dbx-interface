@@ -67,10 +67,16 @@ def create_config(code: str, app_key: str, app_secret: str, dropbox_location: st
 def read_config() -> dict:
     with open(CONFIG_PATH, 'r') as json_file:
         config_data = json.load(json_file)
-        if 'GITIGNORE_OVERRIDES' not in config_data:
-            config_data['GITIGNORE_OVERRIDES'] = set()
+
+        if "DBX_IGNORE" not in config_data:
+            config_data["DBX_IGNORE"] = set()
         else:
-            config_data['GITIGNORE_OVERRIDES'] = set(config_data['GITIGNORE_OVERRIDES'])
+            config_data["DBX_IGNORE"] = set(config_data["DBX_IGNORE"])
+
+        if "GITIGNORE_OVERRIDES" not in config_data:
+            config_data["GITIGNORE_OVERRIDES"] = set()
+        else:
+            config_data["GITIGNORE_OVERRIDES"] = set(config_data["GITIGNORE_OVERRIDES"])
 
         if "TIME_LAST_SYNCED_FROM_LOCAL" not in config_data:
             config_data["TIME_LAST_SYNCED_FROM_LOCAL"] = dict()
@@ -81,18 +87,29 @@ def read_config() -> dict:
         return config_data
     
 def clean_synced_paths(local_dbx_path: str) -> Iterable[str]:
-    print("Cleaning TIME_LAST_SYNCED_FROM_LOCAL")
-    existing_files = []
+
+    print("Reading config")
+    config: dict = read_config()
+
+    existing_files = set()
     existing_folders = set()
 
+    print("Scanning through local files")
+    last_ignored: str = None
     for dirpath, dirnames, filenames in os.walk(local_dbx_path):
+        if last_ignored and dirpath.startswith(last_ignored):
+            continue
+
+        for ignored in config["DBX_IGNORE"]:
+            if dirpath.startswith(ignored):
+                last_ignored = dirpath
+                continue
+
         existing_folders.add("/" + os.path.relpath(dirpath, local_dbx_path))
         for filename in filenames:
             file_local_path = os.path.join(dirpath, filename)
             file_relative_path = "/" + os.path.relpath(file_local_path, local_dbx_path)
-            existing_files.append(file_relative_path)
-
-    config: dict = read_config()
+            existing_files.add(file_relative_path)
 
     if "SYNCED_PATHS" in config:
         if "TIME_LAST_SYNCED_FROM_LOCAL" not in config:
@@ -100,6 +117,7 @@ def clean_synced_paths(local_dbx_path: str) -> Iterable[str]:
             config["TIME_LAST_SYNCED_FROM_LOCAL"] = config["SYNCED_PATHS"]
         config.pop("SYNCED_PATHS")
 
+    print("Checking for modified files")
     new_time_last_synced_from_local = {}
     nonexistent_files = set()
     for path, time in config["TIME_LAST_SYNCED_FROM_LOCAL"].items():
@@ -108,6 +126,7 @@ def clean_synced_paths(local_dbx_path: str) -> Iterable[str]:
         else:
             nonexistent_files.add(path)
 
+    print("Checking time zone formatting")
     tz = pytz.timezone(config['TIME_ZONE'])
     for path, time in new_time_last_synced_from_local.items():
         try:
@@ -131,6 +150,9 @@ def clean_synced_paths(local_dbx_path: str) -> Iterable[str]:
     convert_to_time_zone_format(config, 'TIME_LAST_SYNCED_FROM_CLOUD')
     convert_to_time_zone_format(config, 'TIME_LAST_SYNCED_FROM_LOCAL')
 
+    config["DBX_IGNORE"] = list(config["DBX_IGNORE"])
+    config["GITIGNORE_OVERRIDES"] = list(config["GITIGNORE_OVERRIDES"])
+
     with open(CONFIG_PATH, 'w') as json_file:
         json.dump(config, json_file, indent=4)
 
@@ -150,6 +172,8 @@ def convert_to_time_zone_format(config: dict, synced_times_key: str):
 
 
 def find_paths_to_delete(existing_folders, nonexistent_files) -> set[str]:
+    print("Finding any newly deleted files")
+
     folders_to_delete = set()
     files_to_delete = set()
 
