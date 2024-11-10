@@ -58,10 +58,22 @@ class LocalModel(InterfaceModel):
         self.refresh()
 
     def _delete_local(self, path):
+        config = read_config()
+        synced_paths: dict = config["TIME_LAST_SYNCED_FROM_LOCAL"]
+
+        relative_path = "/" + os.path.relpath(path, self.local_root)
+
         if os.path.isfile(path):
             os.remove(path)
+            if relative_path in synced_paths:
+                synced_paths.pop(relative_path)
         else:
             shutil.rmtree(path)
+            keys_to_remove = [key for key in synced_paths.keys() if key.startswith(relative_path)]
+            for key in keys_to_remove:
+                synced_paths.pop(key)
+
+        self._write_to_synced_paths(synced_paths)
 
     @status_update
     def delete_local(self, task: ExplorerTask) -> None:
