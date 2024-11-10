@@ -100,10 +100,13 @@ def clean_synced_paths(local_dbx_path: str) -> Iterable[str]:
         if last_ignored and dirpath.startswith(last_ignored):
             continue
 
+        skip = False
         for ignored in config["DBX_IGNORE"]:
             if dirpath.startswith(ignored):
                 last_ignored = dirpath
-                continue
+                skip = True
+                break
+        if skip: continue
 
         existing_folders.add("/" + os.path.relpath(dirpath, local_dbx_path))
         for filename in filenames:
