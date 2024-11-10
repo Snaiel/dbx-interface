@@ -1,17 +1,23 @@
+from os.path import dirname, join, realpath
+from sys import argv
+
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QIcon, QKeySequence
+from PyQt5.QtWidgets import QGridLayout, QMainWindow, QShortcut, QWidget
+
+from package.model.dbx_model import DropboxModel
+from package.model.local_model import LocalModel
 from package.ui.widgets.explorers.dbx_explorer import DropboxExplorer
 from package.ui.widgets.explorers.local_explorer import LocalExplorer
 from package.ui.widgets.statusbar import StatusBar
 from package.ui.widgets.task_status import TaskStatusPopup
-from package.model.dbx_model import DropboxModel
-from package.model.local_model import LocalModel
-from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QShortcut
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QKeySequence
+
 
 class MainWindow(QMainWindow):
     def __init__(self, dbx, local_root):
         super().__init__()
         self.setWindowTitle("dbx-interface")
+        self.setWindowIcon(QIcon(join(dirname(realpath(argv[0])), "icon.png")))
 
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)

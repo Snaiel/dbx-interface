@@ -10,6 +10,9 @@ from package.ui.delete_nonexistent import DeleteNonExistent
 
 def run(setup: bool = False) -> int:
     app = QApplication(sys.argv)
+    app.setApplicationDisplayName("dbx-interface")
+    app.setApplicationName("dbx-interface")
+
     if not Path(Path(__file__).parents[1], 'config.json').is_file() or setup:
         if not run_setup():
             return 0
